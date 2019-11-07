@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CGMES:DataSet 
+               xmlns:CGMES="http://Model/1.0/CGMES"
+               xsi:schemaLocation="http://Model/1.0/CGMES cgmes61970oclModel.ecore#//CGMES http://Model/1.0/CGMES cgmes61970oclModel.ecore#//CGMES  ">
+   
+</CGMES:DataSet>

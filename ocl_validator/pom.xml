@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>ocl_validator_2</groupId>
+    <artifactId>ocl_validator_test_2</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>org.eclipse.ocl</groupId>
+            <artifactId>ocl_lib</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar</systemPath>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.eclipse.emf.common</groupId>
+            <artifactId>common_lib</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.common_2.16.0.v20190625-1131.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.emf.ecore.xmi</groupId>
+            <artifactId>xmi_lib</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.ecore.xmi_2.16.0.v20190528-0725.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.emf.ecore</groupId>
+            <artifactId>emf_general</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.ecore_2.19.0.v20190822-1451.jar</systemPath>
+        </dependency>
+
+
+        <dependency>
+            <groupId>org.eclipse.ocl.pivot</groupId>
+            <artifactId>ocl_pivot</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.pivot_1.9.0.v20190910-0937.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.ocl.xtext</groupId>
+            <artifactId>xtext</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.completeocl_1.9.0.v20190910-0937.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.xtext</groupId>
+            <artifactId>xtext_genarel</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.xtext_2.19.0.v20190902-0737.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.xtext.essential</groupId>
+            <artifactId>xtext_essetial</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.xtext.essential</groupId>
+            <artifactId>xtext_essetial_</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/com.google.guava_27.1.0.v20190517-1946.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.apache.log4j_1.2.15.v201012070815.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.6</version>
+        </dependency>
+
+
+
+        <dependency>
+            <groupId>org.eclipse.emf.validation.service</groupId>
+            <artifactId>service</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.validation_1.8.0.201812070911.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sf.saxon</groupId>
+            <artifactId>saxon</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/saxon9ee.jar</systemPath>
+        </dependency></dependencies>
+
+
+
+
+
+</project>
