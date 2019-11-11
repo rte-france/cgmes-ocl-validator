@@ -1,6 +1,6 @@
 package ocl;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
+
+import ocl.util.EvaluationResult;
 import org.eclipse.emf.common.util.Diagnostic;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
@@ -20,33 +20,43 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.logging.Logger;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import ocl.util.XLSWriter;
 
 public class OCLEvaluator {
 
     private static Resource ecoreResource;
-    private static ResourceSet resourceSet = null;
-
+    private static ResourceSet resourceSet;
 
     private static URI mmURI;
     private static URI modelURI;
     private static Resource model;
     private static EPackage p;
 
+    // ----- Static initializations
+    private static Logger LOGGER = null;
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+        LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
+        try {
+            resourceSet = new ResourceSetImpl();
+            HashMap<String, String> configs = get_config();
+            prepare_validator(configs.get("basic_model"), configs.get("ecore_model"));
+        } catch (IOException io){
+            io.printStackTrace();
+        }
+    }
 
-    private static boolean valid;
 
     public OCLEvaluator(){
 
-        ecoreResource=null;
-        mmURI=null;
-        modelURI=null;
-        model=null;
-        resourceSet = new ResourceSetImpl();
-        p=null;
     }
 
     /**
@@ -54,8 +64,6 @@ public class OCLEvaluator {
      * @return Diagnostic object
      */
     public Diagnostic evaluate(StreamResult xmi){
-
-
         InputStream inputStream = new ByteArrayInputStream(xmi.getOutputStream().toString().getBytes());
 
         HashMap<String, Boolean> options = new HashMap<>();
@@ -75,27 +83,23 @@ public class OCLEvaluator {
 
         EObject rootObject = model.getContents().get(0);
 
-
         Diagnostician take = new Diagnostician();
 
         Diagnostic diagnostics;
-
-
         diagnostics = take.validate(rootObject);
 
-        printErrors(diagnostics);
+        //printErrors(diagnostics);
 
         model.unload();
-
-
 
         return diagnostics;
     }
 
-    /*
-     * load ecore resource
+    /**
+     * Load ecore resources
+     * @param r
+     * @return
      */
-
     public static List<EPackage> getPackages(Resource r){
         ArrayList<EPackage> pList = new ArrayList<EPackage>();
         if (r.getContents() != null)
@@ -107,25 +111,8 @@ public class OCLEvaluator {
     }
 
 
-
-    public static void main(String[] args) throws IOException {
-
-
-        File where = null;
-        HashMap<String,String> configs = get_config();
-
-
-        if (args.length<1){
-            System.out.println("You need to specify the folder containing the CGMES IGMs (one zip per instance)");
-            System.exit(0);
-        }
-        else{
-            where = new File(args[0]);
-
-
-        }
-
-
+    public Map<String, List<EvaluationResult>> assessRules(File where){
+        Map<String, List<EvaluationResult>> results = new HashMap<>();
 
         ocl.IGM_CGM_preparation my_prep = new ocl.IGM_CGM_preparation();
         ocl.xmi_transform my_transf = new ocl.xmi_transform();
@@ -134,55 +121,48 @@ public class OCLEvaluator {
 
         try {
             my_prep.read_zip(where);
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+            LOGGER.info("Reordering done!");
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
-        System.out.println("reordering done!");
+
         try {
-
             xmi_list= my_transf.convert_data(my_prep.IGM_CGM);
-
+            LOGGER.info("XMI transformation done!");
         } catch (TransformerException e) {
             e.printStackTrace();
         }
-        System.out.println("xmi transf done!");
 
         OCLEvaluator evaluator = new OCLEvaluator();
-        prepare_validator(configs.get("basic_model"),configs.get("ecore_model"));
         Diagnostic diagnostics;
-        System.out.println("validator ready");
+        LOGGER.info("Validator ready");
         for(String key : xmi_list.keySet()){
-            System.out.println("************");
-            System.out.println("Validating IGM "+key);
-            System.out.println("************");
-
-
-
+            LOGGER.info("");
+            LOGGER.info("************");
+            LOGGER.info("Validating IGM "+key);
+            LOGGER.info("************");
 
             diagnostics = evaluator.evaluate( xmi_list.get(key));
-            valid = true;
 
-            if(!diagnostics.getChildren().isEmpty()){
-                valid = false;
-            }
+            List<EvaluationResult> res = getErrors(diagnostics);
+            printError(res);
+            results.put(key, res);
 
-            if(valid){
-                System.out.println("All constraints for model are valid!");
-            }
-            else{
-                System.out.println("ERROR: Constraints are invalid!");
-            }
+            if(!res.isEmpty())
+                LOGGER.severe("ERROR: Invalid constraints for model: " + key);
+            else
+                LOGGER.info("All constraints are valid for model:" + key);
         }
 
-
-
-
+        return results;
     }
 
+
+    /**
+     * Inizializes configurations
+     * @return
+     * @throws IOException
+     */
     public static HashMap<String,String> get_config() throws IOException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+"/config.properties");
@@ -193,8 +173,7 @@ public class OCLEvaluator {
             configs.put("ecore_model", properties.getProperty("ecore_model"));
         }
         else{
-
-            System.out.println("Variable basic_model or ecore_model are missing from properties file");
+            LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
             System.exit(0);
         }
 
@@ -202,6 +181,11 @@ public class OCLEvaluator {
     }
 
 
+    /**
+     * Preparation of the validator
+     * @param basic_model
+     * @param ecore_model
+     */
     public static void prepare_validator(String basic_model, String ecore_model){
         CompleteOCLStandaloneSetup.doSetup();
 
@@ -215,62 +199,129 @@ public class OCLEvaluator {
 
         ecoreResource = resourceSet.getResource(mmURI, true);
 
-
-
         List<EPackage> pList = getPackages(ecoreResource);
         p = pList.get(0);
 
         resourceSet.getPackageRegistry().put(p.getNsURI(), p);
-
 
         model = resourceSet.getResource(modelURI, true);
         model.unload();
     }
 
 
-    public static void printErrors(Diagnostic diagnostics){
-        if (diagnostics.getSeverity()==Diagnostic.ERROR){
-            for (Iterator<Diagnostic> i = diagnostics.getChildren().iterator(); i.hasNext();){
-                Diagnostic childDiagnostic = i.next();
+    public List<EvaluationResult> getErrors(Diagnostic diagnostics) {
+        //FIXME: severity level is incorrect  (always error); missing rule level
+        List<EvaluationResult> results = new ArrayList<>();
+        {
+            for (Diagnostic childDiagnostic: diagnostics.getChildren()){
                 List<?> data = childDiagnostic.getData();
                 EObject object = (EObject) data.get(0);
                 String msg;
                 Matcher matcher;
                 Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
                 if(data.size()==1){
-
-                    msg = childDiagnostic.getMessage();
-
-                    matcher = pattern.matcher(msg);
-                    while (matcher.find()) {
-
-                        if (object.eClass().getEStructuralFeature("name")!=null){
-                            System.out.println("Rule "+matcher.group(1)+" is violated on "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID"))+" ("+object.eGet(object.eClass().getEStructuralFeature("name"))+")");
-                        }
-                        else{
-                            System.out.println("Rule "+matcher.group(1)+" is violated on "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID")));
-                        }
-
-
-
-                    }
-
-
-                }
-
-                else {
-
                     msg = childDiagnostic.getMessage();
                     matcher = pattern.matcher(msg);
                     while (matcher.find()) {
-                        System.out.println("The required attribute "+matcher.group(1)+" must be set on  "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID")));
+                        String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
+                        results.add(new EvaluationResult(childDiagnostic.getSeverity(),
+                                matcher.group(1),
+                                object.eClass().getName(),
+                                object.eGet(object.eClass().getEStructuralFeature("mRID")).toString(),
+                                name
+                        ));
                     }
-
+                } else {
+                    msg = childDiagnostic.getMessage();
+                    matcher = pattern.matcher(msg);
+                    while (matcher.find()) {
+                        results.add(new EvaluationResult(childDiagnostic.getSeverity(),
+                                matcher.group(1),
+                                object.eClass().getName(),
+                                object.eGet(object.eClass().getEStructuralFeature("mRID")).toString(),
+                                null
+                                ));
+                    }
                 }
             }
         }
+        return results;
     }
 
+
+    public void printError(List<EvaluationResult> res){
+        for (EvaluationResult er: res) {
+            if (er.getSeverity() == Diagnostic.ERROR)
+                LOGGER.severe(er.toString());
+            else if (er.getSeverity() == Diagnostic.WARNING)
+                LOGGER.warning(er.toString());
+        }
+    }
+
+
+    public void writeExcelReport(Map<String, List<EvaluationResult>> synthesis, File path){
+        XLSWriter writer = new XLSWriter();
+        writer.writeResults(synthesis, path);
+
+    }
+
+    /**
+     * Not used anymore
+     * @param diagnostics
+     */
+    /*
+    public static void printErrors(Diagnostic diagnostics){
+
+        if (diagnostics.getSeverity()==Diagnostic.ERROR)
+        {
+            for (Diagnostic childDiagnostic: diagnostics.getChildren()){
+                List<?> data = childDiagnostic.getData();
+                EObject object = (EObject) data.get(0);
+                String msg;
+                Matcher matcher;
+                Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
+                if(data.size()==1){
+                    msg = childDiagnostic.getMessage();
+                    matcher = pattern.matcher(msg);
+                    while (matcher.find()) {
+                        if (object.eClass().getEStructuralFeature("name")!=null){
+                            LOGGER.severe("Rule "+matcher.group(1)+" is violated on "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID"))+" ("+object.eGet(object.eClass().getEStructuralFeature("name"))+")");
+                        } else{
+                            LOGGER.severe("Rule "+matcher.group(1)+" is violated on "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID")));
+                        }
+                    }
+                } else {
+                    msg = childDiagnostic.getMessage();
+                    matcher = pattern.matcher(msg);
+                    while (matcher.find()) {
+                        LOGGER.severe("The required attribute "+matcher.group(1)+" must be set on  "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID")));
+                    }
+                }
+            }
+        }
+    }*/
+
+    /**
+     * Main
+     * @param args - path to CGMES files to be validated
+     */
+    public static void main(String[] args) {
+
+        File where = null;
+
+        if (args.length<1){
+            LOGGER.severe("You need to specify the folder containing the CGMES IGMs (one zip per instance)");
+            System.exit(0);
+        }
+        else{
+            where = new File(args[0]);
+        }
+
+        OCLEvaluator evaluator = new OCLEvaluator();
+        Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where);
+        evaluator.writeExcelReport(synthesis, new File(args[0]+"/QASv3_results.xlsx"));
+
+    }
 
 
 }

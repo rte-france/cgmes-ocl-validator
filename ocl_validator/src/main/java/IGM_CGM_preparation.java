@@ -20,26 +20,21 @@ public class IGM_CGM_preparation {
 
 
     public enum Type{
-        EQ,TP, SSH,SV, other;
+        EQ,TP, SSH, SV, other
     }
 
     public class Profile{
         public Type type;
         public String id;
-        public List<String> depOn= new ArrayList<String>();
+        public List<String> depOn= new ArrayList<>();
         public File file;
         public String xml_name;
-
-
     }
 
-    List<Profile> SVProfiles = new ArrayList<Profile>();
-    List<Profile> otherProfiles = new ArrayList<Profile>();
-    List<Profile> BDProfiles = new ArrayList<Profile>();
+    List<Profile> SVProfiles = new ArrayList<>();
+    List<Profile> otherProfiles = new ArrayList<>();
+    List<Profile> BDProfiles = new ArrayList<>();
     HashMap<Profile,List<Profile>> IGM_CGM= new HashMap<>();
-
-
-
 
 
     public  void read_zip(File models) throws ParserConfigurationException, SAXException, IOException {
@@ -47,7 +42,6 @@ public class IGM_CGM_preparation {
         factory.setNamespaceAware(true);
         SAXParser saxParser = factory.newSAXParser();
 
-        List<String> found = new ArrayList<String>();
         FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
         File[] listOfFiles = models.listFiles(fileFilter);
         for (File file: listOfFiles){
@@ -87,19 +81,15 @@ public class IGM_CGM_preparation {
     }
 
     public void reorder_models(){
-        Iterator<Profile> sv_ = SVProfiles.iterator();
-        while (sv_.hasNext()){
-            final Object my_sv_it=sv_.next();
+        for (Profile my_sv_it : SVProfiles){
             List<Profile> TPs= new ArrayList<>();
             List<Profile> SSHs= new ArrayList<>();
             List<Profile> EQs = new ArrayList<>();
             List<Profile> EQBDs = new ArrayList<>();
             List<Profile> TPBDs = new ArrayList<>();
 
-            for (String sv_dep : ((Profile) my_sv_it).depOn){
-
+            for (String sv_dep : my_sv_it.depOn){
                 Optional<Profile> matchingObject = otherProfiles.stream().filter(p->p.id.equals(sv_dep)).findAny();
-
                 if(matchingObject.isPresent()){
                     switch (matchingObject.get().type){
                         case SSH:
@@ -111,11 +101,10 @@ public class IGM_CGM_preparation {
                     }
                 }
             }
-           // System.out.println(SSHs);
-            Iterator<Profile> sshs_=SSHs.iterator();
-            while (sshs_.hasNext()){
-                final Object my_ssh_it = sshs_.next();
-                for(String ssh_dep : ((Profile) my_ssh_it).depOn){
+
+            // System.out.println(SSHs);
+            for (Profile my_ssh_it : SSHs){
+                for(String ssh_dep : my_ssh_it.depOn){
                     Optional<Profile> matchingObject = otherProfiles.stream().filter(p->p.id.equals(ssh_dep)).findAny();
                     if(matchingObject.isPresent()){
                         switch (matchingObject.get().type){
@@ -126,11 +115,10 @@ public class IGM_CGM_preparation {
                     }
                 }
             }
-           // System.out.println(EQs);
-            Iterator<Profile> eqs_= EQs.iterator();
-            while (eqs_.hasNext()){
-                final Object my_eq_it=eqs_.next();
-                for(String eq_dep : ((Profile) my_eq_it).depOn){
+
+            // System.out.println(EQs);
+            for (Profile my_eq_it: EQs){
+                for(String eq_dep : my_eq_it.depOn){
                     Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.id.equals(eq_dep)).findAny();
                     if(matchingObject.isPresent()){
                         switch (matchingObject.get().type){
@@ -141,41 +129,30 @@ public class IGM_CGM_preparation {
                     }
                 }
             }
+
             //System.out.println(EQBDs);
-            Iterator<Profile> eqbds_ =  EQBDs.iterator();
-            while (eqbds_.hasNext()){
-                final Object my_eqbd_it=eqbds_.next();
-                String eqbd_id_= ((Profile) my_eqbd_it).id;
+            for (Profile my_eqbd_it : EQBDs){
+                String eqbd_id_= my_eqbd_it.id;
                 List<String> eqbd_id= new ArrayList<>();
                 eqbd_id.add(eqbd_id_);
-
                 Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.depOn.equals(eqbd_id)).findAny();
-
-
                 if(matchingObject.isPresent()){
-
                     switch (matchingObject.get().type){
                         case other:
-
                             TPBDs.add(matchingObject.get());
                             break;
-
-
                     }
                 }
 
             }
 
-            IGM_CGM.put((Profile) my_sv_it,EQs);
-            IGM_CGM.get((Profile)my_sv_it).addAll(SSHs);
-            IGM_CGM.get((Profile)my_sv_it).addAll(TPs);
-            IGM_CGM.get((Profile)my_sv_it).addAll(EQBDs);
-            IGM_CGM.get((Profile)my_sv_it).addAll(TPBDs);
-
+            IGM_CGM.put(my_sv_it,EQs);
+            IGM_CGM.get(my_sv_it).addAll(SSHs);
+            IGM_CGM.get(my_sv_it).addAll(TPs);
+            IGM_CGM.get(my_sv_it).addAll(EQBDs);
+            IGM_CGM.get(my_sv_it).addAll(TPBDs);
 
         }
-
-
     }
 
 
@@ -202,8 +179,6 @@ public class IGM_CGM_preparation {
         String my_id;
         List<String> my_depOn = new ArrayList<String>();
 
-
-
         @Override
         public void startElement(String namespaceURI, String localName, String qname, Attributes atts) throws SAXException
         {
@@ -221,10 +196,6 @@ public class IGM_CGM_preparation {
             }
 
         }
-
-
-
-
 
     }
 

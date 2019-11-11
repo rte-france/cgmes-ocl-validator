@@ -6,29 +6,40 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Logger;
 
 public class xmi_transform {
 
-    public TransformerFactory tfactory = TransformerFactory.newInstance();
+    private static Logger LOGGER = null;
+
+    private static TransformerFactory tfactory = TransformerFactory.newInstance();
+
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+        LOGGER=Logger.getLogger(ocl.OCLEvaluator.class.getName());
+    }
 
 
-    public HashMap<String, StreamResult> convert_data(HashMap IGM_CGM) throws TransformerException {
-
+    public HashMap<String, StreamResult> convert_data(HashMap<ocl.IGM_CGM_preparation.Profile,List<ocl.IGM_CGM_preparation.Profile>>  IGM_CGM)
+            throws TransformerException {
 
         HashMap<String,StreamResult> xmi_map = new HashMap<>();
-        for(Object key : IGM_CGM.keySet()){
-            StreamResult resulting_xmi =new StreamResult(new ByteArrayOutputStream());
+        for(ocl.IGM_CGM_preparation.Profile key : IGM_CGM.keySet()){
+            StreamResult resulting_xmi ;
             StreamResult cleaned_sv = clean_profile(get_name_for_xslt(key));
             List<StreamResult> cleaned_eqs = new ArrayList<>();
             List<StreamResult> cleaned_tps = new ArrayList<>();
             List<StreamResult> cleaned_sshs = new ArrayList<>();
-            List<ocl.IGM_CGM_preparation.Profile> values = (List<ocl.IGM_CGM_preparation.Profile>) IGM_CGM.get(key);
-            Object EQBD = new Object();
-            Object TPBD = new Object();
+            ocl.IGM_CGM_preparation.Profile EQBD = null;
+            ocl.IGM_CGM_preparation.Profile TPBD = null;
             List<String> sv_sn = new ArrayList<>();
             List<String> eq_sn = new ArrayList<>();
             List<String> tp_sn = new ArrayList<>();
@@ -38,8 +49,7 @@ public class xmi_transform {
 
             sv_sn.add(get_simple_name_no_ext(key));
 
-
-            for(ocl.IGM_CGM_preparation.Profile value : values){
+            for(ocl.IGM_CGM_preparation.Profile value : IGM_CGM.get(key)){
                 switch (value.type){
                     case EQ:
                         cleaned_eqs.add(clean_profile(get_name_for_xslt(value)));
@@ -66,22 +76,20 @@ public class xmi_transform {
                 }
             }
 
-
+            LOGGER.info("Cleaned:"+key);
             StreamResult merged_xml = merge_profiles(cleaned_sv,cleaned_eqs.get(0),cleaned_tps.get(0),cleaned_sshs.get(0),EQBD,TPBD,sv_sn.get(0),eq_sn.get(0),tp_sn.get(0),ssh_sn.get(0),eqbd_sn.get(0),tpbd_sn.get(0));
+            LOGGER.info("Merged:"+key);
             resulting_xmi = transform_to_xmi(merged_xml);
+            LOGGER.info("Tranformed:"+key);
 
             xmi_map.put(sv_sn.get(0),resulting_xmi);
 
-
-
-
         }
-
         return xmi_map;
 
     }
 
-    public InputStream get_commander(){
+    private InputStream get_commander(){
         //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         //File commander = new File(classLoader.getResource("cim16_analyse_igm.xml").getFile());
        // File commander = new File(this.getClass().getClassLoader().getResource("cim16_analyse_igm.xml").getFile());
@@ -91,8 +99,7 @@ public class xmi_transform {
     }
 
 
-
-    public InputStream get_xslt( String name){
+    private InputStream get_xslt( String name){
         //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         //File xslt_ =  new File(classLoader.getResource(name).getFile());
         //File xslt =  new File(this.getClass().getClassLoader().getResource(name).getFile());
@@ -100,7 +107,7 @@ public class xmi_transform {
         return xslt;
     }
 
-    public InputStream get_ecore(){
+    private InputStream get_ecore(){
         //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         //File ecore_ = new File(classLoader.getResource("cgmes61970oclModel.ecore").getFile());
         //File ecore = new File(this.getClass().getClassLoader().getResource("cgmes61970oclModel.ecore").getFile());
@@ -108,18 +115,18 @@ public class xmi_transform {
         return ecore;
     }
 
-    public String get_simple_name_no_ext(Object object){
-        int pos = ((ocl.IGM_CGM_preparation.Profile)object).file.getName().lastIndexOf(".");
-        String name= pos>0 ? ((ocl.IGM_CGM_preparation.Profile)object).file.getName().substring(0,pos) : ((ocl.IGM_CGM_preparation.Profile)object).file.getName();
+    private String get_simple_name_no_ext(ocl.IGM_CGM_preparation.Profile object){
+        int pos = object.file.getName().lastIndexOf(".");
+        String name= pos>0 ? object.file.getName().substring(0,pos) : object.file.getName();
         return name;
     }
 
-    public String get_name_for_xslt(Object object){
-        String name = "jar:file:"+((ocl.IGM_CGM_preparation.Profile)object).file.getAbsolutePath()+"!/"+((ocl.IGM_CGM_preparation.Profile)object).xml_name;
+    private String get_name_for_xslt(ocl.IGM_CGM_preparation.Profile object){
+        String name = "jar:file:"+object.file.getAbsolutePath()+"!/"+object.xml_name;
         return name;
     }
 
-    public StreamResult clean_profile(String file_name) throws TransformerException {
+    private StreamResult clean_profile(String file_name) throws TransformerException {
 
         InputStream xslt = get_xslt("cim16_clean_data_not_in_profile.xslt");
 
@@ -135,14 +142,13 @@ public class xmi_transform {
 
     }
 
-    public StreamResult merge_profiles(StreamResult sv, StreamResult eq, StreamResult tp, StreamResult ssh, Object EQBD, Object TPBD,
+    private StreamResult merge_profiles(StreamResult sv, StreamResult eq, StreamResult tp, StreamResult ssh, ocl.IGM_CGM_preparation.Profile EQBD, ocl.IGM_CGM_preparation.Profile TPBD,
                                        String sv_sn,
                                        String eq_sn,
                                        String tp_sn,
                                        String ssh_sn,
                                        String eqbd_sn,
                                        String tpbd_sn) throws TransformerException {
-        //TransformerFactory tfactory = TransformerFactory.newInstance();
         InputStream xslt = get_xslt("cim16_merge_igm.xslt");
 
         Transformer transformer = tfactory.newTransformer(new StreamSource(xslt));
@@ -186,8 +192,6 @@ public class xmi_transform {
     }
 
 }
-
-
 
 
  /*TransformerFactory tfactory = TransformerFactory.newInstance();

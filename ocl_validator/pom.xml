@@ -23,6 +23,12 @@
     <dependencies>
 
         <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>3.15</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.eclipse.ocl</groupId>
             <artifactId>ocl_lib</artifactId>
             <version>1.0</version>
