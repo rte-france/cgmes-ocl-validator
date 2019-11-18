@@ -163,6 +163,27 @@ public class OCLEvaluator {
         return results;
     }
 
+    /**
+     *
+     * @param input
+     * @return
+     */
+    private static String resolveEnvVars(String input)
+    {
+        if (null == input) return null;
+
+        // match ${ENV_VAR_NAME} or $ENV_VAR_NAME
+        Pattern p = Pattern.compile("\\$\\{(\\w+)\\}|\\$(\\w+)");
+        Matcher m = p.matcher(input); // get a matcher object
+        StringBuffer sb = new StringBuffer();
+        while(m.find()){
+            String envVarName = null == m.group(1) ? m.group(2) : m.group(1);
+            String envVarValue = System.getenv(envVarName);
+            m.appendReplacement(sb, null == envVarValue ? "" : envVarValue);
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
 
     /**
      * Inizializes configurations
@@ -174,9 +195,12 @@ public class OCLEvaluator {
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+"/config.properties");
         Properties properties = new Properties();
         properties.load(config);
-        if (properties.getProperty("basic_model")!=null && properties.getProperty("ecore_model")!=null){
-            configs.put("basic_model", properties.getProperty("basic_model"));
-            configs.put("ecore_model", properties.getProperty("ecore_model"));
+        String basic_model = properties.getProperty("basic_model");
+        String ecore_model = properties.getProperty("ecore_model");
+
+        if (basic_model!=null && ecore_model!=null){
+            configs.put("basic_model", resolveEnvVars(basic_model));
+            configs.put("ecore_model", resolveEnvVars(ecore_model));
         }
         else{
             LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
