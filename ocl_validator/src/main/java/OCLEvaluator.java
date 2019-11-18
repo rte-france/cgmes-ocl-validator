@@ -254,10 +254,11 @@ public class OCLEvaluator {
                     matcher = pattern.matcher(msg);
                     while (matcher.find()) {
                         String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
+                        System.out.println();
                         results.add(new EvaluationResult(childDiagnostic.getSeverity(),
                                 matcher.group(1),
                                 object.eClass().getName(),
-                                object.eGet(object.eClass().getEStructuralFeature("mRID")).toString(),
+                                (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
                                 name
                         ));
                     }
@@ -268,7 +269,7 @@ public class OCLEvaluator {
                         results.add(new EvaluationResult(childDiagnostic.getSeverity(),
                                 matcher.group(1),
                                 object.eClass().getName(),
-                                object.eGet(object.eClass().getEStructuralFeature("mRID")).toString(),
+                                (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
                                 null
                                 ));
                     }
