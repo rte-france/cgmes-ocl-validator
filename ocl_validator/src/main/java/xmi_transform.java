@@ -1,15 +1,20 @@
 package ocl;
 import org.apache.commons.io.IOUtils;
+import org.w3c.dom.*;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.StringWriter;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,13 +33,16 @@ public class xmi_transform {
     }
 
 
-    public HashMap<String, StreamResult> convert_data(HashMap<ocl.IGM_CGM_preparation.Profile,List<ocl.IGM_CGM_preparation.Profile>>  IGM_CGM)
-            throws TransformerException {
+    public HashMap<String, StreamResult> convert_data(HashMap<ocl.IGM_CGM_preparation.Profile,List<ocl.IGM_CGM_preparation.Profile>>  IGM_CGM, List<String> defaultBDIds)
+            throws TransformerException, IOException, SAXException, ParserConfigurationException {
 
         HashMap<String,StreamResult> xmi_map = new HashMap<>();
         for(ocl.IGM_CGM_preparation.Profile key : IGM_CGM.keySet()){
             StreamResult resulting_xmi ;
             StreamResult cleaned_sv = clean_profile(get_name_for_xslt(key));
+            if(key.DepToBeReplaced.size()!=0){
+                cleaned_sv = CorrectDeps(cleaned_sv,key.DepToBeReplaced, defaultBDIds.get(1));
+            }
             List<StreamResult> cleaned_eqs = new ArrayList<>();
             List<StreamResult> cleaned_tps = new ArrayList<>();
             List<StreamResult> cleaned_sshs = new ArrayList<>();
@@ -52,7 +60,12 @@ public class xmi_transform {
             for(ocl.IGM_CGM_preparation.Profile value : IGM_CGM.get(key)){
                 switch (value.type){
                     case EQ:
-                        cleaned_eqs.add(clean_profile(get_name_for_xslt(value)));
+                        StreamResult cleaned_EQ = new StreamResult();
+                        cleaned_EQ = clean_profile(get_name_for_xslt(value));
+                        if(key.DepToBeReplaced.size()!=0){
+                            cleaned_EQ = CorrectDeps(cleaned_EQ,value.DepToBeReplaced,defaultBDIds.get(0));
+                        }
+                        cleaned_eqs.add(cleaned_EQ);
                         eq_sn.add(get_simple_name_no_ext(value));
                         break;
                     case TP:
@@ -124,6 +137,26 @@ public class xmi_transform {
     private String get_name_for_xslt(ocl.IGM_CGM_preparation.Profile object){
         String name = "jar:file:"+object.file.getAbsolutePath()+"!/"+object.xml_name;
         return name;
+    }
+
+    private StreamResult CorrectDeps (StreamResult profile, List<String> ToBeReplaced, String defaultBDId) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        builderFactory.setNamespaceAware(true);
+        DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
+        Document document = documentBuilder.parse(new InputSource(new StringReader(profile.getOutputStream().toString())));
+        NodeList nodeList = document.getElementsByTagName("md:Model.DependentOn");
+        for (int i =0; i<nodeList.getLength();i++){
+            Node attribute = nodeList.item(i).getAttributes().item(0);
+           if(ToBeReplaced.stream().anyMatch(p->p.trim().equals(attribute.getNodeValue()))){
+                attribute.setNodeValue(defaultBDId);
+           }
+        }
+        DOMSource domSource = new DOMSource(document);
+        StreamResult result = new StreamResult(new ByteArrayOutputStream());
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.transform(domSource,result);
+        return result;
     }
 
     private StreamResult clean_profile(String file_name) throws TransformerException {

@@ -127,9 +127,15 @@ public class OCLEvaluator {
         }
 
         try {
-            xmi_list= my_transf.convert_data(my_prep.IGM_CGM);
+            xmi_list= my_transf.convert_data(my_prep.IGM_CGM, my_prep.defaultBDIds);
             LOGGER.info("XMI transformation done!");
         } catch (TransformerException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
             e.printStackTrace();
         }
 

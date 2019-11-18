@@ -8,16 +8,19 @@ import org.xml.sax.helpers.DefaultHandler;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class IGM_CGM_preparation {
-
+    private static Logger LOGGER = null;
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+        LOGGER=Logger.getLogger(ocl.OCLEvaluator.class.getName());
+    }
 
     public enum Type{
         EQ,TP, SSH, SV, other
@@ -29,12 +32,14 @@ public class IGM_CGM_preparation {
         public List<String> depOn= new ArrayList<>();
         public File file;
         public String xml_name;
+        public List<String> DepToBeReplaced= new ArrayList<>();
     }
 
     List<Profile> SVProfiles = new ArrayList<>();
     List<Profile> otherProfiles = new ArrayList<>();
     List<Profile> BDProfiles = new ArrayList<>();
     HashMap<Profile,List<Profile>> IGM_CGM= new HashMap<>();
+    List<String> defaultBDIds = new ArrayList<>();
 
 
     public  void read_zip(File models) throws ParserConfigurationException, SAXException, IOException {
@@ -53,7 +58,7 @@ public class IGM_CGM_preparation {
                 InputStream xmlStream = zip.getInputStream(entry);
                 saxParser.parse( xmlStream, handler );
                 Profile profile = new Profile();
-                profile.type=get_type(file.getName());
+                profile.type=get_type(entry.getName());
                 profile.depOn=handler.my_depOn;
                 profile.id=handler.my_id;
                 profile.file=file;
@@ -78,6 +83,8 @@ public class IGM_CGM_preparation {
         }
 
         reorder_models();
+        CheckConsitency();
+
     }
 
     public void reorder_models(){
@@ -87,6 +94,7 @@ public class IGM_CGM_preparation {
             List<Profile> EQs = new ArrayList<>();
             List<Profile> EQBDs = new ArrayList<>();
             List<Profile> TPBDs = new ArrayList<>();
+
 
             for (String sv_dep : my_sv_it.depOn){
                 Optional<Profile> matchingObject = otherProfiles.stream().filter(p->p.id.equals(sv_dep)).findAny();
@@ -100,9 +108,14 @@ public class IGM_CGM_preparation {
                             break;
                     }
                 }
+                else{
+                    Optional<Profile> matchingObject_bds = BDProfiles.stream().filter(p->p.id.equals(sv_dep)).findAny();
+                    if(!matchingObject_bds.isPresent()){
+                        my_sv_it.DepToBeReplaced.add(sv_dep);
+                    }
+                }
             }
 
-            // System.out.println(SSHs);
             for (Profile my_ssh_it : SSHs){
                 for(String ssh_dep : my_ssh_it.depOn){
                     Optional<Profile> matchingObject = otherProfiles.stream().filter(p->p.id.equals(ssh_dep)).findAny();
@@ -116,7 +129,6 @@ public class IGM_CGM_preparation {
                 }
             }
 
-            // System.out.println(EQs);
             for (Profile my_eq_it: EQs){
                 for(String eq_dep : my_eq_it.depOn){
                     Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.id.equals(eq_dep)).findAny();
@@ -127,10 +139,12 @@ public class IGM_CGM_preparation {
                                 break;
                         }
                     }
+                    else{
+                        my_eq_it.DepToBeReplaced.add(eq_dep);
+                    }
                 }
             }
 
-            //System.out.println(EQBDs);
             for (Profile my_eqbd_it : EQBDs){
                 String eqbd_id_= my_eqbd_it.id;
                 List<String> eqbd_id= new ArrayList<>();
@@ -152,10 +166,104 @@ public class IGM_CGM_preparation {
             IGM_CGM.get(my_sv_it).addAll(EQBDs);
             IGM_CGM.get(my_sv_it).addAll(TPBDs);
 
+
         }
     }
 
+    public void CheckConsitency() throws ParserConfigurationException, SAXException, IOException {
+        boolean BDParsed = false;
+        List<Profile> defaultBDs = new ArrayList<>();
+        for (Profile key : IGM_CGM.keySet()){
+            int NumEqs = 0;
+            int NumTPs = 0;
+            int NumSSHs = 0;
+            int NumBDs = 0;
+            for(Profile value : IGM_CGM.get(key)){
+                switch (value.type){
+                    case EQ:
+                        NumEqs+=1;
+                        break;
+                    case TP:
+                        NumTPs+=1;
+                        break;
+                    case SSH:
+                        NumSSHs+=1;
+                        break;
+                    case other:
+                        NumBDs+=1;
+                        break;
+                }
+            }
+            if (!(NumEqs==NumTPs && NumTPs==NumSSHs)){
+                LOGGER.severe("The following model is missing one instance: " + key.xml_name);
+                IGM_CGM.remove(key);
+            }
+            else{
+                if(NumBDs<2 ){
+                    if (BDParsed == false){
+                        defaultBDs=get_default_bds();
+                        BDParsed = true;
+                    }
 
+                    IGM_CGM.get(key).addAll(defaultBDs);
+                }
+            }
+        }
+
+    }
+
+    public List<Profile> get_default_bds() throws IOException, ParserConfigurationException, SAXException {
+        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + "/config.properties");
+        Properties properties = new Properties();
+        properties.load(config);
+        List<Profile> defaultBDs = new ArrayList<>();
+        if (properties.getProperty("default_bd") != null) {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            factory.setNamespaceAware(true);
+            SAXParser saxParser = factory.newSAXParser();
+            File bds = new File(properties.getProperty("default_bd"));
+            FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
+            File[] listOfFiles = bds.listFiles(fileFilter);
+            for (File file : listOfFiles) {
+                ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
+                Enumeration<? extends ZipEntry> entries = zip.entries();
+                while (entries.hasMoreElements()) {
+                    UserHandler handler = new UserHandler();
+                    ZipEntry entry = entries.nextElement();
+                    InputStream xmlStream = zip.getInputStream(entry);
+                    saxParser.parse( xmlStream, handler );
+                    if(get_type(entry.getName())==Type.other){
+                        Profile profile = new Profile();
+                        profile.type=get_type(entry.getName());
+                        profile.depOn=handler.my_depOn;
+                        profile.id=handler.my_id;
+                        profile.file=file;
+                        profile.xml_name=entry.getName();
+                        defaultBDs.add(profile);
+                        if(handler.my_depOn.size()!=0){
+                            defaultBDIds.add(handler.my_depOn.get(0));
+                            defaultBDIds.add(handler.my_id);
+
+                        }
+                    }
+                    else{
+                        LOGGER.severe("Impossible to add default boundaries!");
+                        System.exit(0);
+                    }
+                }
+
+            }
+            if(defaultBDIds.size()<2){
+                LOGGER.severe("One boundary instance is missing in "+properties.getProperty("default_bd")+": Validation stops!");
+                System.exit(0);
+            }
+        }
+        else {
+            LOGGER.severe("Default boundary location not specified!");
+            System.exit(0);
+        }
+        return defaultBDs;
+    }
     public Type get_type(String file_name) {
 
         if (file_name.contains("_SV_")) {
