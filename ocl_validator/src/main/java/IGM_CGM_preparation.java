@@ -221,7 +221,7 @@ public class IGM_CGM_preparation {
             SAXParserFactory factory = SAXParserFactory.newInstance();
             factory.setNamespaceAware(true);
             SAXParser saxParser = factory.newSAXParser();
-            File bds = new File(properties.getProperty("default_bd"));
+            File bds = new File(ocl.OCLEvaluator.resolveEnvVars(properties.getProperty("default_bd")));
             FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
             File[] listOfFiles = bds.listFiles(fileFilter);
             for (File file : listOfFiles) {

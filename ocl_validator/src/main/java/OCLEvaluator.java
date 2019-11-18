@@ -168,7 +168,7 @@ public class OCLEvaluator {
      * @param input
      * @return
      */
-    private static String resolveEnvVars(String input)
+    static String resolveEnvVars(String input)
     {
         if (null == input) return null;
 
