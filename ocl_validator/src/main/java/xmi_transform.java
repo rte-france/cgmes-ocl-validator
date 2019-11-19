@@ -89,11 +89,11 @@ public class xmi_transform {
                 }
             }
 
-            LOGGER.info("Cleaned:"+key);
+            LOGGER.info("Cleaned:"+key.xml_name);
             StreamResult merged_xml = merge_profiles(cleaned_sv,cleaned_eqs.get(0),cleaned_tps.get(0),cleaned_sshs.get(0),EQBD,TPBD,sv_sn.get(0),eq_sn.get(0),tp_sn.get(0),ssh_sn.get(0),eqbd_sn.get(0),tpbd_sn.get(0));
-            LOGGER.info("Merged:"+key);
+            LOGGER.info("Merged:"+key.xml_name);
             resulting_xmi = transform_to_xmi(merged_xml);
-            LOGGER.info("Tranformed:"+key);
+            LOGGER.info("Tranformed:"+key.xml_name);
 
             xmi_map.put(sv_sn.get(0),resulting_xmi);
 
