@@ -13,13 +13,33 @@
             <outputDirectory>/</outputDirectory>
             <useProjectArtifact>true</useProjectArtifact>
             <unpack>true</unpack>
+            <unpackOptions>
+                <excludes>
+                    <exclude>plugin.properties</exclude>
+                    <exclude>**/MANIFEST.MF</exclude>
+                </excludes>
+            </unpackOptions>
             <scope>runtime</scope>
         </dependencySet>
         <dependencySet>
             <outputDirectory>/</outputDirectory>
             <unpack>true</unpack>
+            <unpackOptions>
+                <excludes>
+                    <exclude>plugin.properties</exclude>
+                    <exclude>**/MANIFEST.MF</exclude>
+                </excludes>
+            </unpackOptions>
             <scope>system</scope>
         </dependencySet>
     </dependencySets>
-
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.directory}/classes</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>plugin.properties</include>
+            </includes>
+        </fileSet>
+    </fileSets>
 </assembly>
