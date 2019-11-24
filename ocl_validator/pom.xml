@@ -206,6 +206,30 @@
         </dependency>
 
         <dependency>
+            <groupId>org.eclipse.osgi</groupId>
+            <artifactId>osgi</artifactId>
+            <version>3.15.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.osgi_3.15.0.v20190830-1434.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.urischeme</groupId>
+            <artifactId>urischeme</artifactId>
+            <version>1.0.400</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.urischeme_1.0.400.v20190621-1448.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.xpand</groupId>
+            <artifactId>xpand</artifactId>
+            <version>2.2.0</version>
+            <scope>system</scope>
+            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.xpand_2.2.0.v201605260315.jar</systemPath>
+        </dependency>
+
+        <dependency>
             <groupId>org.eclipse.xtext</groupId>
             <artifactId>xtext</artifactId>
             <version>2.19.0</version>
