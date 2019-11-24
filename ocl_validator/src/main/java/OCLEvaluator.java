@@ -1,6 +1,7 @@
 package ocl;
 
 import ocl.util.EvaluationResult;
+import ocl.util.IOUtils;
 import org.eclipse.emf.common.util.Diagnostic;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
@@ -20,6 +21,7 @@ import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Logger;
@@ -51,6 +53,8 @@ public class OCLEvaluator {
             prepare_validator(configs.get("basic_model"), configs.get("ecore_model"));
         } catch (IOException io){
             io.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
     }
 
@@ -111,6 +115,11 @@ public class OCLEvaluator {
     }
 
 
+    /**
+     *
+     * @param where
+     * @return
+     */
     public Map<String, List<EvaluationResult>> assessRules(File where){
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
@@ -163,35 +172,13 @@ public class OCLEvaluator {
         return results;
     }
 
-    /**
-     *
-     * @param input
-     * @return
-     */
-    static String resolveEnvVars(String input)
-    {
-        if (null == input) return null;
-
-        // match ${ENV_VAR_NAME} or $ENV_VAR_NAME
-        Pattern p = Pattern.compile("\\$\\{(\\w+)\\}|\\$(\\w+)");
-        Matcher m = p.matcher(input); // get a matcher object
-        StringBuffer sb = new StringBuffer();
-        String output = new String();
-        while(m.find()){
-            String envVarName = null == m.group(1) ? m.group(2) : m.group(1);
-            String envVarValue = System.getenv(envVarName).replace("\\", "\\\\");
-            m.appendReplacement(sb, null == envVarValue ? "" : envVarValue);
-        }
-        m.appendTail(sb);
-        return sb.toString();
-    }
 
     /**
      * Inizializes configurations
      * @return
      * @throws IOException
      */
-    public static HashMap<String,String> get_config() throws IOException {
+    public static HashMap<String,String> get_config() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+File.separator+"config.properties");
         Properties properties = new Properties();
@@ -200,8 +187,8 @@ public class OCLEvaluator {
         String ecore_model = properties.getProperty("ecore_model");
 
         if (basic_model!=null && ecore_model!=null){
-            configs.put("basic_model", resolveEnvVars(basic_model));
-            configs.put("ecore_model", resolveEnvVars(ecore_model));
+            configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
+            configs.put("ecore_model", IOUtils.resolveEnvVars(ecore_model));
         }
         else{
             LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
@@ -238,7 +225,11 @@ public class OCLEvaluator {
         model.unload();
     }
 
-
+    /**
+     *
+     * @param diagnostics
+     * @return
+     */
     public List<EvaluationResult> getErrors(Diagnostic diagnostics) {
         //FIXME: severity level is incorrect  (always error); missing rule level
         List<EvaluationResult> results = new ArrayList<>();
@@ -280,7 +271,7 @@ public class OCLEvaluator {
     }
 
 
-    public void printError(List<EvaluationResult> res){
+    private void printError(List<EvaluationResult> res){
         for (EvaluationResult er: res) {
             if (er.getSeverity() == Diagnostic.ERROR)
                 LOGGER.severe(er.toString());
@@ -290,7 +281,7 @@ public class OCLEvaluator {
     }
 
 
-    public void writeExcelReport(Map<String, List<EvaluationResult>> synthesis, File path){
+    private void writeExcelReport(Map<String, List<EvaluationResult>> synthesis, File path){
         XLSWriter writer = new XLSWriter();
         writer.writeResults(synthesis, path);
 

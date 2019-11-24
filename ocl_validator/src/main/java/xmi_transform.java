@@ -1,5 +1,5 @@
 package ocl;
-import org.apache.commons.io.IOUtils;
+import ocl.util.IOUtils;
 import org.w3c.dom.*;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -8,13 +8,14 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,7 +63,7 @@ public class xmi_transform {
             for(ocl.IGM_CGM_preparation.Profile value : IGM_CGM.get(key)){
                 switch (value.type){
                     case EQ:
-                        StreamResult cleaned_EQ = new StreamResult();
+                        StreamResult cleaned_EQ;
                         cleaned_EQ = clean_profile(get_name_for_xslt(value));
                         if(key.DepToBeReplaced.size()!=0){
                             cleaned_EQ = CorrectDeps(cleaned_EQ,value.DepToBeReplaced,defaultBDIds.get(0));
@@ -122,14 +123,6 @@ public class xmi_transform {
         return xslt;
     }
 
-    private InputStream get_ecore(){
-        //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        //File ecore_ = new File(classLoader.getResource("cgmes61970oclModel.ecore").getFile());
-        //File ecore = new File(this.getClass().getClassLoader().getResource("cgmes61970oclModel.ecore").getFile());
-        InputStream ecore = this.getClass().getClassLoader().getResourceAsStream(ECORE_FILE);
-        return ecore;
-    }
-
     private String get_simple_name_no_ext(ocl.IGM_CGM_preparation.Profile object){
         int pos = object.file.getName().lastIndexOf(".");
         String name= pos>0 ? object.file.getName().substring(0,pos) : object.file.getName();
@@ -168,7 +161,6 @@ public class xmi_transform {
         Transformer transformer = tfactory.newTransformer(new StreamSource(xslt));
 
         transformer.setParameter("file",file_name);
-        StringWriter writer = new StringWriter();
         StreamResult result = new StreamResult(new ByteArrayOutputStream());
 
         transformer.transform(new StreamSource(get_commander()), result);
@@ -205,20 +197,20 @@ public class xmi_transform {
     }
 
     public StreamResult transform_to_xmi(StreamResult merged_xml) throws TransformerException {
-        //TransformerFactory tfactory = TransformerFactory.newInstance();
         InputStream xslt = get_xslt("cim16_create_xmi_from_cimxml.xslt");
 
         Transformer transformer = tfactory.newTransformer(new StreamSource(xslt));
         transformer.setParameter("merged_xml",merged_xml.getOutputStream().toString());
 
-        StringWriter writer = new StringWriter();
         try {
-            IOUtils.copy(get_ecore(),writer);
-            transformer.setParameter("ecore", writer.toString());
+            transformer.setParameter("ecore",
+                    IOUtils.readFile(ocl.OCLEvaluator.get_config().get("ecore_model"), StandardCharsets.UTF_8));
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
-        transformer.setParameter("ecore_name","cgmes61970oclModel.ecore");
+        transformer.setParameter("ecore_name", ECORE_FILE);
 
         transformer.setParameter("type", "igm");
         StreamResult result = new StreamResult(new ByteArrayOutputStream());
@@ -227,21 +219,3 @@ public class xmi_transform {
     }
 
 }
-
-
- /*TransformerFactory tfactory = TransformerFactory.newInstance();
-        String sourceID = "/home/chiaramellomar/EMF_meetings/ocl_validator/xslt_tests/test_4/cim16_analyse_igm.xml";
-        String xslID = "/home/chiaramellomar/EMF_meetings/ocl_validator/xslt_tests/test_4/converter.xslt";
-        Transformer transformer = tfactory.newTransformer(new StreamSource(xslID));
-        //transformer.setParameter("render_id","1234");
-        //transformer.transform(new StreamSource(sourceID), new StreamResult(new File("/home/chiaramellomar/EMF_meetings/ocl_validator/xslt_tests/test_4/Simple2.out")));
-        for(Object key : IGM_CGM.keySet()){
-            int pos = ((ocl.IGM_CGM_preparation.Profile)key).file.getName().lastIndexOf(".");
-            String file_name= pos>0 ? ((ocl.IGM_CGM_preparation.Profile)key).file.getName().substring(0,pos) : ((ocl.IGM_CGM_preparation.Profile)key).file.getName();
-            String sv_name = "jar:file:"+((ocl.IGM_CGM_preparation.Profile)key).file.getAbsolutePath()+"!/"+file_name+".xml";
-            transformer.setParameter("sv_file",sv_name);
-            Result result = new StreamResult(new ByteArrayOutputStream());
-
-            transformer.transform(new StreamSource(sourceID), result);
-           *//* System.out.println(((StreamResult) result).getOutputStream().toString());*//*
-        }*/
