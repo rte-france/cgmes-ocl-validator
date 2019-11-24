@@ -176,9 +176,10 @@ public class OCLEvaluator {
         Pattern p = Pattern.compile("\\$\\{(\\w+)\\}|\\$(\\w+)");
         Matcher m = p.matcher(input); // get a matcher object
         StringBuffer sb = new StringBuffer();
+        String output = new String();
         while(m.find()){
             String envVarName = null == m.group(1) ? m.group(2) : m.group(1);
-            String envVarValue = System.getenv(envVarName);
+            String envVarValue = System.getenv(envVarName).replace("\\", "\\\\");
             m.appendReplacement(sb, null == envVarValue ? "" : envVarValue);
         }
         m.appendTail(sb);
@@ -192,7 +193,7 @@ public class OCLEvaluator {
      */
     public static HashMap<String,String> get_config() throws IOException {
         HashMap<String,String> configs =  new HashMap<>();
-        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+"/config.properties");
+        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+File.separator+"config.properties");
         Properties properties = new Properties();
         properties.load(config);
         String basic_model = properties.getProperty("basic_model");
@@ -226,7 +227,6 @@ public class OCLEvaluator {
         mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
         File my_model = new File(basic_model);
         modelURI = URI.createFileURI(my_model.getAbsolutePath());
-
         ecoreResource = resourceSet.getResource(mmURI, true);
 
         List<EPackage> pList = getPackages(ecoreResource);

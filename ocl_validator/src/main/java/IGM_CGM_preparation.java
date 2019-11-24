@@ -213,7 +213,7 @@ public class IGM_CGM_preparation {
     }
 
     public List<Profile> get_default_bds() throws IOException, ParserConfigurationException, SAXException {
-        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + "/config.properties");
+        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + File.separator + "config.properties");
         Properties properties = new Properties();
         properties.load(config);
         List<Profile> defaultBDs = new ArrayList<>();

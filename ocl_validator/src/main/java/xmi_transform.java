@@ -26,6 +26,8 @@ public class xmi_transform {
 
     private static TransformerFactory tfactory = TransformerFactory.newInstance();
 
+    private static String ECORE_FILE = "cgmes61970oclModel.ecore";
+
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
@@ -124,7 +126,7 @@ public class xmi_transform {
         //ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         //File ecore_ = new File(classLoader.getResource("cgmes61970oclModel.ecore").getFile());
         //File ecore = new File(this.getClass().getClassLoader().getResource("cgmes61970oclModel.ecore").getFile());
-        InputStream ecore = this.getClass().getClassLoader().getResourceAsStream("cgmes61970oclModel.ecore");
+        InputStream ecore = this.getClass().getClassLoader().getResourceAsStream(ECORE_FILE);
         return ecore;
     }
 
