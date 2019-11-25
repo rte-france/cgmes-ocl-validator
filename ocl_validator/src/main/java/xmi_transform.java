@@ -144,7 +144,7 @@ public class xmi_transform {
     }
 
     private String get_name_for_xslt(ocl.IGM_CGM_preparation.Profile object){
-        String name = "jar:file:"+object.file.getAbsolutePath()+"!/"+object.xml_name;
+        String name = "jar:file:"+object.file.getAbsolutePath()+"!"+File.separator+object.xml_name;
         return name;
     }
 
