@@ -28,6 +28,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -144,7 +145,8 @@ public class xmi_transform {
     }
 
     private String get_name_for_xslt(ocl.IGM_CGM_preparation.Profile object){
-        String name = "jar:file:"+object.file.getAbsolutePath()+"!"+File.separator+object.xml_name;
+        String fURI = object.file.toURI().toASCIIString();
+        String name = "jar:"+fURI+"!/"+object.xml_name;
         return name;
     }
 
