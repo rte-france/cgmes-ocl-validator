@@ -34,20 +34,7 @@ public class IGM_CGM_preparation {
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
-        LOGGER=Logger.getLogger(ocl.OCLEvaluator.class.getName());
-    }
-
-    public enum Type{
-        EQ,TP, SSH, SV, other
-    }
-
-    public class Profile{
-        public Type type;
-        public String id;
-        public List<String> depOn= new ArrayList<>();
-        public File file;
-        public String xml_name;
-        public List<String> DepToBeReplaced= new ArrayList<>();
+        LOGGER=Logger.getLogger(IGM_CGM_preparation.class.getName());
     }
 
     List<Profile> SVProfiles = new ArrayList<>();
@@ -57,7 +44,7 @@ public class IGM_CGM_preparation {
     List<String> defaultBDIds = new ArrayList<>();
 
 
-    public  void readZip(File models) throws ParserConfigurationException, SAXException, IOException {
+    void readZip(File models) throws ParserConfigurationException, SAXException, IOException {
         SAXParserFactory factory = SAXParserFactory.newInstance();
         factory.setNamespaceAware(true);
         SAXParser saxParser = factory.newSAXParser();
@@ -72,13 +59,7 @@ public class IGM_CGM_preparation {
                 ZipEntry entry = entries.nextElement();
                 InputStream xmlStream = zip.getInputStream(entry);
                 saxParser.parse( xmlStream, handler );
-                Profile profile = new Profile();
-                profile.type= getType(entry.getName());
-                profile.depOn=handler.my_depOn;
-                profile.id=handler.my_id;
-                profile.file=file;
-                profile.xml_name=entry.getName();
-
+                Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
                 switch (profile.type){
                     case SV:
                         SVProfiles.add(profile);
@@ -86,7 +67,6 @@ public class IGM_CGM_preparation {
                     case EQ:
                     case TP:
                     case SSH:
-
                         otherProfiles.add(profile);
                         break;
                     case other:
@@ -102,6 +82,7 @@ public class IGM_CGM_preparation {
 
     }
 
+
     public void reorderModels(){
         for (Profile my_sv_it : SVProfiles){
             List<Profile> TPs= new ArrayList<>();
@@ -109,7 +90,6 @@ public class IGM_CGM_preparation {
             List<Profile> EQs = new ArrayList<>();
             List<Profile> EQBDs = new ArrayList<>();
             List<Profile> TPBDs = new ArrayList<>();
-
 
             for (String sv_dep : my_sv_it.depOn){
                 Optional<Profile> matchingObject = otherProfiles.stream().filter(p->p.id.equals(sv_dep)).findAny();
@@ -122,12 +102,10 @@ public class IGM_CGM_preparation {
                             TPs.add(matchingObject.get());
                             break;
                     }
-                }
-                else{
+                } else{
                     Optional<Profile> matchingObject_bds = BDProfiles.stream().filter(p->p.id.equals(sv_dep)).findAny();
-                    if(!matchingObject_bds.isPresent()){
+                    if(!matchingObject_bds.isPresent())
                         my_sv_it.DepToBeReplaced.add(sv_dep);
-                    }
                 }
             }
 
@@ -153,10 +131,7 @@ public class IGM_CGM_preparation {
                                 EQBDs.add(matchingObject.get());
                                 break;
                         }
-                    }
-                    else{
-                        my_eq_it.DepToBeReplaced.add(eq_dep);
-                    }
+                    } else my_eq_it.DepToBeReplaced.add(eq_dep);
                 }
             }
 
@@ -172,7 +147,6 @@ public class IGM_CGM_preparation {
                             break;
                     }
                 }
-
             }
 
             IGM_CGM.put(my_sv_it,EQs);
@@ -180,11 +154,15 @@ public class IGM_CGM_preparation {
             IGM_CGM.get(my_sv_it).addAll(TPs);
             IGM_CGM.get(my_sv_it).addAll(EQBDs);
             IGM_CGM.get(my_sv_it).addAll(TPBDs);
-
-
         }
     }
 
+    /**
+     *
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     * @throws IOException
+     */
     public void checkConsitency() throws ParserConfigurationException, SAXException, IOException {
         boolean BDParsed = false;
         List<Profile> defaultBDs = new ArrayList<>();
@@ -196,37 +174,40 @@ public class IGM_CGM_preparation {
             for(Profile value : IGM_CGM.get(key)){
                 switch (value.type){
                     case EQ:
-                        NumEqs+=1;
+                        NumEqs++;
                         break;
                     case TP:
-                        NumTPs+=1;
+                        NumTPs++;
                         break;
                     case SSH:
-                        NumSSHs+=1;
+                        NumSSHs++;
                         break;
                     case other:
-                        NumBDs+=1;
+                        NumBDs++;
                         break;
                 }
             }
             if (!(NumEqs==NumTPs && NumTPs==NumSSHs)){
                 LOGGER.severe("The following model is missing one instance: " + key.xml_name);
                 IGM_CGM.remove(key);
-            }
-            else{
-                if(NumBDs<2 ){
-                    if (BDParsed == false){
-                        defaultBDs= getDefaultBds();
-                        BDParsed = true;
-                    }
-
-                    IGM_CGM.get(key).addAll(defaultBDs);
+            } else if(NumBDs<2 ){
+                if (BDParsed == false){
+                    defaultBDs= getDefaultBds();
+                    BDParsed = true;
                 }
+                IGM_CGM.get(key).addAll(defaultBDs);
             }
         }
 
     }
 
+    /**
+     *
+     * @return
+     * @throws IOException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     */
     public List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + File.separator + "config.properties");
         Properties properties = new Properties();
@@ -247,21 +228,14 @@ public class IGM_CGM_preparation {
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
                     saxParser.parse( xmlStream, handler );
-                    if(getType(entry.getName())==Type.other){
-                        Profile profile = new Profile();
-                        profile.type= getType(entry.getName());
-                        profile.depOn=handler.my_depOn;
-                        profile.id=handler.my_id;
-                        profile.file=file;
-                        profile.xml_name=entry.getName();
+                    if(Profile.getType(entry.getName()) == Profile.Type.other){
+                        Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
                         defaultBDs.add(profile);
                         if(handler.my_depOn.size()!=0){
                             defaultBDIds.add(handler.my_depOn.get(0));
                             defaultBDIds.add(handler.my_id);
-
                         }
-                    }
-                    else{
+                    } else{
                         LOGGER.severe("Impossible to add default boundaries!");
                         System.exit(0);
                     }
@@ -272,52 +246,30 @@ public class IGM_CGM_preparation {
                 LOGGER.severe("One boundary instance is missing in "+properties.getProperty("default_bd")+": Validation stops!");
                 System.exit(0);
             }
-        }
-        else {
+        } else {
             LOGGER.severe("Default boundary location not specified!");
             System.exit(0);
         }
         return defaultBDs;
     }
-    public Type getType(String file_name) {
 
-        if (file_name.contains("_SV_")) {
-            return Type.valueOf("SV");
-        } else if (file_name.contains("_SSH_")) {
-            return Type.valueOf("SSH");
-        } else if (file_name.contains("_TP_")) {
-            return Type.valueOf("TP");
-        } else if (file_name.contains("_EQ_")){
-            return Type.valueOf("EQ");
-        } else if (file_name.contains("BD")) {
-            return Type.valueOf("other");
-        }
-        else{
-            return Type.valueOf("other");
-        }
-    }
 
+    /**
+     *
+     */
     static class UserHandler extends DefaultHandler
     {
         String my_id;
         List<String> my_depOn = new ArrayList<String>();
 
         @Override
-        public void startElement(String namespaceURI, String localName, String qname, Attributes atts) throws SAXException
-        {
-
+        public void startElement(String namespaceURI, String localName, String qname, Attributes atts){
             if(qname.equalsIgnoreCase("md:FullModel")){
-                /*System.out.println(qname);
-                System.out.println(atts.getValue("rdf:about"));*/
                 my_id=atts.getValue("rdf:about");
-
             }
             if(qname.equalsIgnoreCase("md:Model.DependentOn")){
-                //System.out.println(atts.getValue("rdf:resource"));
                 my_depOn.add(atts.getValue("rdf:resource"));
-
             }
-
         }
 
     }
