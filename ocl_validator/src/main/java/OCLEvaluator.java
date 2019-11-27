@@ -260,7 +260,6 @@ public class OCLEvaluator {
                     matcher = pattern.matcher(msg);
                     while (matcher.find()) {
                         String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
-                        System.out.println();
                         results.add(new EvaluationResult(childDiagnostic.getSeverity(),
                                 matcher.group(1),
                                 object.eClass().getName(),

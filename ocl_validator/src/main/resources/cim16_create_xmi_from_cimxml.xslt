@@ -70,7 +70,7 @@ Change history
 				<xsl:with-param name="path" select="base-uri(.)"/>
 			</xsl:call-template>
 		</xsl:variable>-->
-		<xsl:variable name="input" select="fn:parse-xml($merged_xml)"/>
+		<xsl:variable name="input" select="fn:root($merged_xml)"/>
 		<!--<xsl:variable name="result_file_name" select="fn:concat(fn:substring-before($input_file_name, '.xml'), '.xmi')"/>-->
 		<xsl:variable name="im" select="fn:parse-xml($ecore)/ecore:EPackage"/>
 		<xsl:variable name="data_root" select="IM_PACKAGE[@data_root]/@data_root"/>
