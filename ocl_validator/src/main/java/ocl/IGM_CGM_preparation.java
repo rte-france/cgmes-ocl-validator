@@ -57,7 +57,7 @@ public class IGM_CGM_preparation {
     List<String> defaultBDIds = new ArrayList<>();
 
 
-    public  void read_zip(File models) throws ParserConfigurationException, SAXException, IOException {
+    public  void readZip(File models) throws ParserConfigurationException, SAXException, IOException {
         SAXParserFactory factory = SAXParserFactory.newInstance();
         factory.setNamespaceAware(true);
         SAXParser saxParser = factory.newSAXParser();
@@ -73,7 +73,7 @@ public class IGM_CGM_preparation {
                 InputStream xmlStream = zip.getInputStream(entry);
                 saxParser.parse( xmlStream, handler );
                 Profile profile = new Profile();
-                profile.type=get_type(entry.getName());
+                profile.type= getType(entry.getName());
                 profile.depOn=handler.my_depOn;
                 profile.id=handler.my_id;
                 profile.file=file;
@@ -97,12 +97,12 @@ public class IGM_CGM_preparation {
             }
         }
 
-        reorder_models();
-        CheckConsitency();
+        reorderModels();
+        checkConsitency();
 
     }
 
-    public void reorder_models(){
+    public void reorderModels(){
         for (Profile my_sv_it : SVProfiles){
             List<Profile> TPs= new ArrayList<>();
             List<Profile> SSHs= new ArrayList<>();
@@ -185,7 +185,7 @@ public class IGM_CGM_preparation {
         }
     }
 
-    public void CheckConsitency() throws ParserConfigurationException, SAXException, IOException {
+    public void checkConsitency() throws ParserConfigurationException, SAXException, IOException {
         boolean BDParsed = false;
         List<Profile> defaultBDs = new ArrayList<>();
         for (Profile key : IGM_CGM.keySet()){
@@ -216,7 +216,7 @@ public class IGM_CGM_preparation {
             else{
                 if(NumBDs<2 ){
                     if (BDParsed == false){
-                        defaultBDs=get_default_bds();
+                        defaultBDs= getDefaultBds();
                         BDParsed = true;
                     }
 
@@ -227,7 +227,7 @@ public class IGM_CGM_preparation {
 
     }
 
-    public List<Profile> get_default_bds() throws IOException, ParserConfigurationException, SAXException {
+    public List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + File.separator + "config.properties");
         Properties properties = new Properties();
         properties.load(config);
@@ -247,9 +247,9 @@ public class IGM_CGM_preparation {
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
                     saxParser.parse( xmlStream, handler );
-                    if(get_type(entry.getName())==Type.other){
+                    if(getType(entry.getName())==Type.other){
                         Profile profile = new Profile();
-                        profile.type=get_type(entry.getName());
+                        profile.type= getType(entry.getName());
                         profile.depOn=handler.my_depOn;
                         profile.id=handler.my_id;
                         profile.file=file;
@@ -279,7 +279,7 @@ public class IGM_CGM_preparation {
         }
         return defaultBDs;
     }
-    public Type get_type(String file_name) {
+    public Type getType(String file_name) {
 
         if (file_name.contains("_SV_")) {
             return Type.valueOf("SV");

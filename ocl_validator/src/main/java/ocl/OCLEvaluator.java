@@ -63,8 +63,8 @@ public class OCLEvaluator {
         LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
         try {
             resourceSet = new ResourceSetImpl();
-            HashMap<String, String> configs = get_config();
-            prepare_validator(configs.get("basic_model"), configs.get("ecore_model"));
+            HashMap<String, String> configs = getConfig();
+            prepareValidator(configs.get("basic_model"), configs.get("ecore_model"));
         } catch (IOException io){
             io.printStackTrace();
         } catch (URISyntaxException e) {
@@ -143,14 +143,14 @@ public class OCLEvaluator {
         HashMap<String, StreamResult> xmi_list = new HashMap<>();
 
         try {
-            my_prep.read_zip(where);
+            my_prep.readZip(where);
             LOGGER.info("Reordering done!");
         } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
 
         try {
-            xmi_list= my_transf.convert_data(my_prep.IGM_CGM, my_prep.defaultBDIds);
+            xmi_list= my_transf.convertData(my_prep.IGM_CGM, my_prep.defaultBDIds);
             LOGGER.info("XMI transformation done!");
         } catch (TransformerException e) {
             e.printStackTrace();
@@ -192,7 +192,7 @@ public class OCLEvaluator {
      * @return
      * @throws IOException
      */
-    public static HashMap<String,String> get_config() throws IOException, URISyntaxException {
+    public static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+File.separator+"config.properties");
         Properties properties = new Properties();
@@ -218,7 +218,7 @@ public class OCLEvaluator {
      * @param basic_model
      * @param ecore_model
      */
-    public static void prepare_validator(String basic_model, String ecore_model){
+    public static void prepareValidator(String basic_model, String ecore_model){
         CompleteOCLStandaloneSetup.doSetup();
 
         OCLstdlib.install();
