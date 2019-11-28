@@ -90,6 +90,7 @@ public class OCLEvaluator {
             model.load(inputStream,options);
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
         }
 
         EPackage ePackage = model.getContents().get(0).eClass().getEPackage();
@@ -172,15 +173,18 @@ public class OCLEvaluator {
             LOGGER.info("************");
 
             diagnostics = evaluator.evaluate( xmi_list.get(key));
+            if (diagnostics==null) {
+                LOGGER.severe("Problem with input xmi for model: " + key);
+            } else {
+                List<EvaluationResult> res = getErrors(diagnostics);
+                printError(res);
+                results.put(key, res);
 
-            List<EvaluationResult> res = getErrors(diagnostics);
-            printError(res);
-            results.put(key, res);
-
-            if(!res.isEmpty())
-                LOGGER.severe("ERROR: Invalid constraints for model: " + key);
-            else
-                LOGGER.info("All constraints are valid for model:" + key);
+                if (!res.isEmpty())
+                    LOGGER.severe("ERROR: Invalid constraints for model: " + key);
+                else
+                    LOGGER.info("All constraints are valid for model:" + key);
+            }
         }
 
         return results;
@@ -247,36 +251,34 @@ public class OCLEvaluator {
     public List<EvaluationResult> getErrors(Diagnostic diagnostics) {
         //FIXME: severity level is incorrect  (always error); missing rule level
         List<EvaluationResult> results = new ArrayList<>();
-        {
-            for (Diagnostic childDiagnostic: diagnostics.getChildren()){
-                List<?> data = childDiagnostic.getData();
-                EObject object = (EObject) data.get(0);
-                String msg;
-                Matcher matcher;
-                Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
-                if(data.size()==1){
-                    msg = childDiagnostic.getMessage();
-                    matcher = pattern.matcher(msg);
-                    while (matcher.find()) {
-                        String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
-                        results.add(new EvaluationResult(childDiagnostic.getSeverity(),
-                                matcher.group(1),
-                                object.eClass().getName(),
-                                (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
-                                name
-                        ));
-                    }
-                } else {
-                    msg = childDiagnostic.getMessage();
-                    matcher = pattern.matcher(msg);
-                    while (matcher.find()) {
-                        results.add(new EvaluationResult(childDiagnostic.getSeverity(),
-                                matcher.group(1),
-                                object.eClass().getName(),
-                                (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
-                                null
-                                ));
-                    }
+        for (Diagnostic childDiagnostic: diagnostics.getChildren()){
+            List<?> data = childDiagnostic.getData();
+            EObject object = (EObject) data.get(0);
+            String msg;
+            Matcher matcher;
+            Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
+            if(data.size()==1){
+                msg = childDiagnostic.getMessage();
+                matcher = pattern.matcher(msg);
+                while (matcher.find()) {
+                    String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
+                    results.add(new EvaluationResult(childDiagnostic.getSeverity(),
+                            matcher.group(1),
+                            object.eClass().getName(),
+                            (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
+                            name
+                    ));
+                }
+            } else {
+                msg = childDiagnostic.getMessage();
+                matcher = pattern.matcher(msg);
+                while (matcher.find()) {
+                    results.add(new EvaluationResult(childDiagnostic.getSeverity(),
+                            matcher.group(1),
+                            object.eClass().getName(),
+                            (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
+                            null
+                    ));
                 }
             }
         }
