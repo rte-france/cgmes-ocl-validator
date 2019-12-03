@@ -186,6 +186,7 @@ public class xmi_transform {
         NodeList nodeListsv = getNodeList(sv);
         NodeList nodeListEqBd = getNodeListBD(eqbd.file);
         NodeList nodeListTpBd = getNodeListBD(tpbd.file);
+        boolean isNb = isNb(nodeListeq);
         Document target = nodeListeq.item(0).getOwnerDocument();
         addFullModelInfo(nodeListeq,"EQ",business);
         addFullModelInfo(nodeListtp,"TP",business);
@@ -314,7 +315,8 @@ public class xmi_transform {
                 }
                 addNode(target,BDObjects.get(t).TPn);
                 addNode(target,BDObjects.get(t).EQn);
-                addNode(target,BDObjects.get(t).CNn);
+                if(isNb)
+                    addNode(target,BDObjects.get(t).CNn);
             }
             else{
                 addNode(target,TPs2add.get(t));
@@ -347,6 +349,28 @@ public class xmi_transform {
 
         return target;
 
+    }
+
+    private boolean isNb(NodeList nodeList){
+        boolean nb = false;
+        NodeList fullmodel = nodeList.item(0).getOwnerDocument().getElementsByTagName("md:FullModel");for(int i=0; i<fullmodel.getLength();i++){
+            if(fullmodel.item(i).getLocalName()!=null){
+                if(fullmodel.item(i).hasChildNodes()){
+                    NodeList childs = fullmodel.item(i).getChildNodes();
+                    for(int c=0;c<childs.getLength();c++){
+                        if(childs.item(c).getLocalName()!=null){
+                            String localName= childs.item(c).getLocalName();
+                            if(localName.contains("Model.profile")){
+                                if (childs.item(c).getTextContent().contains("EquipmentOperation"))
+                                    nb=true;
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+        return nb;
     }
 
     /**
