@@ -28,6 +28,7 @@ import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
@@ -154,6 +155,7 @@ public class xmi_transform {
             resulting_xmi = transformToXmi(merged_xml);
 
             LOGGER.info("Transformed:"+key.xml_name);
+
 
             xmi_map.put(sv_sn.get(0),resulting_xmi);
 
@@ -407,9 +409,10 @@ public class xmi_transform {
         }
 
         cleanXml(target);
-        //printDocument(target, "example.xml");
+        target.normalizeDocument();
 
-        return target;
+
+       return  target;
 
     }
 
@@ -448,12 +451,18 @@ public class xmi_transform {
         LOGGER.info("middle ");
 
 
-        NodeList nodeList = root.getChildNodes();
+        NodeList nodeList = document.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","*");
         Node[] nodes = convertToArray(nodeList);
         for (Node node : nodes) {
             if(!StringUtils.isEmpty(node.getLocalName())){
-                if(!classes.contains(node.getLocalName())){
-                    node.getParentNode().removeChild(node);
+                String[] name = node.getLocalName().split("\\.");
+                for (String s : name) {
+                    if(!classes.contains(s)){
+                       // System.out.println(node.getLocalName());
+                        if(node.getParentNode()!=null)
+                            node.getParentNode().removeChild(node);
+
+                    }
                 }
             }
         }
@@ -495,6 +504,17 @@ public class xmi_transform {
         for(int i=0; i<nodeList.getLength();i++){
             String className= nodeList.item(i).getAttributes().getNamedItem("name").getNodeValue();
             classes.add(className);
+            if(nodeList.item(i).hasChildNodes()){
+                NodeList childs = nodeList.item(i).getChildNodes();
+                for(int c = 0; c<childs.getLength();c++){
+                    if(childs.item(c).getLocalName()!=null) {
+                        if (childs.item(c).getLocalName().contains("eStructuralFeatures")) {
+                            String derived = childs.item(c).getAttributes().getNamedItem("name").getNodeValue();
+                            classes.add(derived);
+                        }
+                    }
+                }
+            }
 
         }
 
