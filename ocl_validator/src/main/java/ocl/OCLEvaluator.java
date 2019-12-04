@@ -155,7 +155,7 @@ public class OCLEvaluator {
             LOGGER.info("XMI transformation done!");
         } catch (TransformerException e) {
             e.printStackTrace();
-        } catch (SAXException e) {
+        } catch (SAXException | URISyntaxException e) {
             e.printStackTrace();
         } catch (ParserConfigurationException e) {
             e.printStackTrace();
