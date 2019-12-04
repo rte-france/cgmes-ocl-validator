@@ -208,18 +208,18 @@ public class xmi_transform {
         NodeList nodeListssh = getNodeList(SSH);
         NodeList nodeListtp = getNodeList(TP);
         NodeList nodeListsv = correctDeps(getNodeList(SV), SV.DepToBeReplaced,defaultBDIds.get(1));
-        NodeList nodeListEqBd = getNodeListBD(eqbd.file);
-        NodeList nodeListTpBd = getNodeListBD(tpbd.file);
+        NodeList nodeListEqBd = getNodeList(eqbd);
+        NodeList nodeListTpBd = getNodeList(tpbd);
         boolean isNb = isNb(nodeListeq);
         Document target = nodeListeq.item(0).getOwnerDocument();
         target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
 
-        addFullModelInfo(nodeListeq,"EQ",business);
-        addFullModelInfo(nodeListtp,"TP",business);
-        addFullModelInfo(nodeListssh,"SSH",business);
-        addFullModelInfo(nodeListsv,"SV",business);
-        addFullModelInfo(nodeListEqBd,"EQBD",null);
-        addFullModelInfo(nodeListTpBd,"TPBD",null);
+        addFullModelInfo(target,"EQ",business);
+        addFullModelInfo(nodeListtp.item(0).getOwnerDocument(),"TP",business);
+        addFullModelInfo(nodeListssh.item(0).getOwnerDocument(),"SSH",business);
+        addFullModelInfo(nodeListsv.item(0).getOwnerDocument(),"SV",business);
+        addFullModelInfo(nodeListEqBd.item(0).getOwnerDocument(),"EQBD",null);
+        addFullModelInfo(nodeListTpBd.item(0).getOwnerDocument(),"TPBD",null);
 
 
         mergeBoundaries(nodeListTpBd,nodeListEqBd);
@@ -585,9 +585,12 @@ public class xmi_transform {
 
     }
 
-    private void addFullModelInfo(NodeList nodeList, String modelPart_, String business) throws IOException, TransformerException {
-        Document doc = nodeList.item(0).getOwnerDocument();
-        NodeList fullmodel = nodeList.item(0).getOwnerDocument().getElementsByTagName("md:FullModel");
+
+
+
+    private void addFullModelInfo(Document doc, String modelPart_, String business) throws IOException, TransformerException {
+
+        NodeList fullmodel = doc.getElementsByTagName("md:FullModel");
         String effectiveDate = new String();
         String sourcingTSO_ = new String();
         String fileVersion_ = new String();
@@ -750,32 +753,7 @@ public class xmi_transform {
             }
         }
     }
-
-
-    /**
-     *
-     * @param BD
-     * @return
-     * @throws ParserConfigurationException
-     * @throws IOException
-     * @throws SAXException
-     */
-    private NodeList getNodeListBD(File BD) throws ParserConfigurationException, IOException, SAXException {
-        ZipFile zip = new ZipFile(new File(BD.getAbsolutePath()));
-        Enumeration<? extends ZipEntry> entries = zip.entries();
-        NodeList nodeList=null;
-        while (entries.hasMoreElements()){
-            ZipEntry entry = entries.nextElement();
-            InputStream xmlStream = zip.getInputStream(entry);
-            DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-            builderFactory.setNamespaceAware(true);
-            DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
-            Document document = documentBuilder.parse(xmlStream);
-            Element root = document.getDocumentElement();
-            nodeList = root.getChildNodes();
-        }
-        return nodeList;
-    }
+    
 
     /**
      *
