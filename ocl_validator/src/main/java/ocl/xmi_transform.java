@@ -65,13 +65,9 @@ public class xmi_transform {
         Node BVn;
     }
 
-    class object{
-        Node node;
-    }
-
     Set<String> classes = new HashSet<>();
     HashMap<String,BDObject> BDObjects = new HashMap<>();
-    HashMap<String,object> BVmap = new HashMap<>();
+    HashMap<String,Node> BVmap = new HashMap<>();
 
     /**
      *
@@ -224,17 +220,16 @@ public class xmi_transform {
 
         mergeBoundaries(nodeListTpBd,nodeListEqBd);
 
-        HashMap<String,object> eq_ = new HashMap<>();
+        HashMap<String,Node> eq_ = new HashMap<>();
         for(int i=0; i<nodeListeq.getLength();i++){
             if(nodeListeq.item(i).getLocalName()!=null){
-                object my_eq = new object();
-                my_eq.node=nodeListeq.item(i);
+                Node my_eq = nodeListeq.item(i);
                 if(!nodeListeq.item(i).getLocalName().contains("FullModel")) {
                     Node ext = target.createElement("brlnd:ModelObject." + brlndType.get(EQ.type.toString()));
                     ((Element) ext).setAttribute("rdf:resource", EQ.id);
-                    my_eq.node.appendChild(ext);
+                    my_eq.appendChild(ext);
                 }
-                eq_.put(nodeListeq.item(i).getAttributes().item(0).getNodeValue(),my_eq);
+                eq_.put(nodeListeq.item(i).getAttributes().item(0).getNodeValue(),nodeListeq.item(i));
             }
         }
 
@@ -248,14 +243,12 @@ public class xmi_transform {
         addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false);
 
 
-        HashMap<String,object> declaredBV = new HashMap<>();
+        HashMap<String,Node> declaredBV = new HashMap<>();
         NodeList baseVoltage = nodeListeq.item(0).getOwnerDocument().getElementsByTagName("cim:BaseVoltage");
         for(int i=0; i<baseVoltage.getLength();i++){
             if(baseVoltage.item(i).getLocalName()!=null){
                 String id = baseVoltage.item(i).getAttributes().item(0).getNodeValue();
-                object object = new object();
-                object.node=baseVoltage.item(i);
-                declaredBV.put(id,object);
+                declaredBV.put(id,baseVoltage.item(i));
             }
         }
 
@@ -266,11 +259,9 @@ public class xmi_transform {
                 String id = transf.item(i).getAttributes().item(0).getNodeValue().replace("#","");
                 if(!declaredBV.containsKey(id)){
                     if(BVmap.containsKey(id)){
-                        Node node = target.importNode(BVmap.get(id).node,true);
+                        Node node = target.importNode(BVmap.get(id),true);
                         target.getDocumentElement().appendChild(node);
-                        object object = new object();
-                        object.node=node;
-                        declaredBV.put(id,object);
+                        declaredBV.put(id,node);
                     }
                 }
             }
@@ -284,11 +275,9 @@ public class xmi_transform {
                     if (StringUtils.contains(voltageLevels.item(i).getChildNodes().item(c).getLocalName(),"VoltageLevel.BaseVoltage")){
                         String id = voltageLevels.item(i).getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                         if (!declaredBV.containsKey(id) && BVmap.containsKey(id)){
-                            Node node = target.importNode(BVmap.get(id).node,true);
+                            Node node = target.importNode(BVmap.get(id),true);
                             target.getDocumentElement().appendChild(node);
-                            object object = new object();
-                            object.node=node;
-                            declaredBV.put(id,object);
+                            declaredBV.put(id,node);
                         }
                     }
                 }
@@ -303,14 +292,14 @@ public class xmi_transform {
                         for(int c=0; c<nodeListssh.item(i).getChildNodes().getLength();c++){
                             if(nodeListssh.item(i).getChildNodes().item(c).getLocalName()!=null) {
 
-                                Node node = eq_.get(id).node.getOwnerDocument().importNode(nodeListssh.item(i).getChildNodes().item(c),true);
-                                eq_.get(id).node.appendChild(node);
+                                Node node = eq_.get(id).getOwnerDocument().importNode(nodeListssh.item(i).getChildNodes().item(c),true);
+                                eq_.get(id).appendChild(node);
 
                             }
                         }
                         Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
                         ((Element) ext).setAttribute("rdf:resource", SSH.id);
-                        eq_.get(id).node.appendChild(ext);
+                        eq_.get(id).appendChild(ext);
                     }
                 }
             }
@@ -327,9 +316,9 @@ public class xmi_transform {
                             if(nodeListtp.item(i).getChildNodes().item(c).getLocalName()!=null) {
                                 Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
                                 ((Element) ext).setAttribute("rdf:resource", TP.id);
-                                Node node = eq_.get(id).node.getOwnerDocument().importNode(nodeListtp.item(i).getChildNodes().item(c),true);
-                                eq_.get(id).node.appendChild(node);
-                                eq_.get(id).node.appendChild(ext);
+                                Node node = eq_.get(id).getOwnerDocument().importNode(nodeListtp.item(i).getChildNodes().item(c),true);
+                                eq_.get(id).appendChild(node);
+                                eq_.get(id).appendChild(ext);
                                 if(nodeListtp.item(i).getChildNodes().item(c).getLocalName().contains("TopologicalNode")){
                                     String tpid = nodeListtp.item(i).getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                                     if(BDObjects.containsKey(tpid)){
@@ -350,10 +339,8 @@ public class xmi_transform {
             if(BDObjects.containsKey(t)){
                 bv = BDObjects.get(t).BVn.getAttributes().item(0).getNodeValue();
                 if(!declaredBV.containsKey(bv)){
-                    object object = new object();
-                    object.node=BDObjects.get(t).BVn;
                     addNode(target,BDObjects.get(t).BVn);
-                    declaredBV.put(bv,object);
+                    declaredBV.put(bv,BDObjects.get(t).BVn);
                 }
                 addNode(target,BDObjects.get(t).TPn);
                 addNode(target,BDObjects.get(t).EQn);
@@ -380,8 +367,8 @@ public class xmi_transform {
                             NodeList childs = nodeListsv.item(i).getChildNodes();
                             for(int c=0; c<childs.getLength();c++){
                                 if(childs.item(c).getLocalName()!=null){
-                                    Node node = eq_.get(id).node.getOwnerDocument().importNode(childs.item(c),true);
-                                    eq_.get(id).node.appendChild(node);
+                                    Node node = eq_.get(id).getOwnerDocument().importNode(childs.item(c),true);
+                                    eq_.get(id).appendChild(node);
                                 }
                             }
                         }
@@ -705,9 +692,7 @@ public class xmi_transform {
         for(int i=0; i<BVlist.getLength();i++){
             if(BVlist.item(i).getLocalName()!=null){
                 String id = BVlist.item(i).getAttributes().item(0).getNodeValue();
-                object bv = new object();
-                bv.node=BVlist.item(i);
-                BVmap.put(id,bv);
+                BVmap.put(id,BVlist.item(i));
             }
         }
 
@@ -726,7 +711,7 @@ public class xmi_transform {
                             if(TPChilds.item(c).getLocalName().contains("TopologicalNode.BaseVoltage")){
                                 String bv =TPChilds.item(c).getAttributes().item(0).getNodeValue().replace("#","");
                                 if(BVmap.containsKey(bv)){
-                                    BDObjects.get(TPid).BVn=BVmap.get(bv).node;
+                                    BDObjects.get(TPid).BVn=BVmap.get(bv);
                                 }
                             }
                         }
