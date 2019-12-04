@@ -234,14 +234,7 @@ public class xmi_transform {
         addFullModelInfo(nodeListsv,"SV",business);
         addFullModelInfo(nodeListEqBd,"EQBD",null);
         addFullModelInfo(nodeListTpBd,"TPBD",null);
-        addObject(target,nodeListssh,"md:FullModel",true);
-        addObject(target,nodeListtp,"md:FullModel",true);
-        addObject(target,nodeListsv,"md:FullModel",true);
-        addObject(target,nodeListEqBd,"md:FullModel",true);
-        addObject(target,nodeListTpBd,"md:FullModel",true);
-        addObject(target,nodeListEqBd,"cim:GeographicalRegion",false);
-        addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false);
-        addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false);
+
 
         mergeBoundaries(nodeListTpBd,nodeListEqBd);
 
@@ -258,6 +251,16 @@ public class xmi_transform {
                 eq_.put(nodeListeq.item(i).getAttributes().item(0).getNodeValue(),my_eq);
             }
         }
+
+        addObject(target,nodeListssh,"md:FullModel",true);
+        addObject(target,nodeListtp,"md:FullModel",true);
+        addObject(target,nodeListsv,"md:FullModel",true);
+        addObject(target,nodeListEqBd,"md:FullModel",true);
+        addObject(target,nodeListTpBd,"md:FullModel",true);
+        addObject(target,nodeListEqBd,"cim:GeographicalRegion",false);
+        addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false);
+        addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false);
+
 
         HashMap<String,object> declaredBV = new HashMap<>();
         NodeList baseVoltage = nodeListeq.item(0).getOwnerDocument().getElementsByTagName("cim:BaseVoltage");
@@ -313,13 +316,15 @@ public class xmi_transform {
                     if(nodeListssh.item(i).hasChildNodes()){
                         for(int c=0; c<nodeListssh.item(i).getChildNodes().getLength();c++){
                             if(nodeListssh.item(i).getChildNodes().item(c).getLocalName()!=null) {
-                                Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
-                                ((Element) ext).setAttribute("rdf:resource", SSH.id);
+
                                 Node node = eq_.get(id).node.getOwnerDocument().importNode(nodeListssh.item(i).getChildNodes().item(c),true);
                                 eq_.get(id).node.appendChild(node);
-                                eq_.get(id).node.appendChild(ext);
+
                             }
                         }
+                        Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
+                        ((Element) ext).setAttribute("rdf:resource", SSH.id);
+                        eq_.get(id).node.appendChild(ext);
                     }
                 }
             }
@@ -391,25 +396,26 @@ public class xmi_transform {
                                 if(childs.item(c).getLocalName()!=null){
                                     Node node = eq_.get(id).node.getOwnerDocument().importNode(childs.item(c),true);
                                     eq_.get(id).node.appendChild(node);
-                                    Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
-                                    ((Element) ext).setAttribute("rdf:resource", SV.id);
-                                    eq_.get(id).node.appendChild(ext);
                                 }
                             }
                         }
                     }
                     else{
-                        Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
-                        ((Element) ext).setAttribute("rdf:resource", SV.id);
                         Node my_node = addNode(target, nodeListsv.item(i));
-                        my_node.appendChild(ext);
+                        if(nodeListsv.item(i).getLocalName().contains("TopologicalIsland") || nodeListsv.item(i).getLocalName().contains("SvStatus")){
+                            Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
+                            ((Element) ext).setAttribute("rdf:resource", SV.id);
+                            my_node.appendChild(ext);
+                        }
+
                     }
                 }
             }
         }
 
+
+
         cleanXml(target);
-        target.normalizeDocument();
 
 
        return  target;
@@ -453,21 +459,43 @@ public class xmi_transform {
 
         NodeList nodeList = document.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","*");
         Node[] nodes = convertToArray(nodeList);
+
+
         for (Node node : nodes) {
             if(!StringUtils.isEmpty(node.getLocalName())){
-                String[] name = node.getLocalName().split("\\.");
-                for (String s : name) {
-                    if(!classes.contains(s)){
-                       // System.out.println(node.getLocalName());
-                        if(node.getParentNode()!=null)
-                            node.getParentNode().removeChild(node);
+                String name = node.getLocalName();
+                if(!classes.contains(name)){
+                    if(node.getParentNode()!=null)
+                        node.getParentNode().removeChild(node);
 
-                    }
                 }
             }
         }
 
+        NodeList season = document.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","Season.endDate");
+        Node[] seNodes = convertToArray(season);
+        for (Node seNode : seNodes) {
+            if(!StringUtils.isEmpty(seNode.getLocalName())){
+                if(Character.toString(seNode.getTextContent().charAt(0)).contains("-")){
+
+                    String s = seNode.getTextContent().replaceFirst("-","2019");
+                    seNode.setTextContent(s);
+                }
+            }
+        }
+
+        season = document.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","Season.startDate");
+        seNodes = convertToArray(season);
+        for (Node seNode : seNodes) {
+            if(!StringUtils.isEmpty(seNode.getLocalName())){
+                if(Character.toString(seNode.getTextContent().charAt(0)).contains("-")){
+                    String s = seNode.getTextContent().replaceFirst("-","2019");
+                    seNode.setTextContent(s);
+                }
+            }
+        }
         LOGGER.info("End");
+
 
     }
 
@@ -510,13 +538,23 @@ public class xmi_transform {
                     if(childs.item(c).getLocalName()!=null) {
                         if (childs.item(c).getLocalName().contains("eStructuralFeatures")) {
                             String derived = childs.item(c).getAttributes().getNamedItem("name").getNodeValue();
-                            classes.add(derived);
+                            if(childs.item(c).getAttributes().getNamedItem("lowerBound")!=null){
+                                classes.add(className+"."+derived);
+                            }
+                            else if (childs.item(c).getAttributes().getNamedItem("upperBound")!=null){
+                                classes.add(derived+"."+className);
+                            }
+                            else{
+                                classes.add(className+"."+derived);
+                                classes.add(derived+"."+className);
+                            }
                         }
                     }
                 }
             }
 
         }
+
 
     }
 
