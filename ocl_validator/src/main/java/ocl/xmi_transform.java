@@ -128,10 +128,9 @@ public class xmi_transform {
                 }
             }
 
-            LOGGER.info("Cleaned:"+key.xml_name);
             Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
 
-            LOGGER.info("Merged:"+key.xml_name);
+            LOGGER.info("Merged and cleaned:"+key.xml_name);
 
             resulting_xmi = transformToXmi(merged_xml);
 
@@ -291,10 +290,8 @@ public class xmi_transform {
                     if(nodeListssh.item(i).hasChildNodes()){
                         for(int c=0; c<nodeListssh.item(i).getChildNodes().getLength();c++){
                             if(nodeListssh.item(i).getChildNodes().item(c).getLocalName()!=null) {
-
                                 Node node = eq_.get(id).getOwnerDocument().importNode(nodeListssh.item(i).getChildNodes().item(c),true);
                                 eq_.get(id).appendChild(node);
-
                             }
                         }
                         Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
@@ -348,10 +345,10 @@ public class xmi_transform {
                     addNode(target,BDObjects.get(t).CNn);
             }
             else{
-                Node addedTp = addNode(target,TPs2add.get(t));
-                Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                ((Element) ext).setAttribute("rdf:resource", TP.id);
-                addedTp.appendChild(ext);
+                Node ext_ = TPs2add.get(t).getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
+                ((Element) ext_).setAttribute("rdf:resource", TP.id);
+                TPs2add.get(t).appendChild(ext_);
+                addNode(target,TPs2add.get(t));
 
             }
         }
