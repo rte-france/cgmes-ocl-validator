@@ -25,6 +25,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
@@ -68,6 +69,8 @@ public class xmi_transform {
     Set<String> classes = new HashSet<>();
     HashMap<String,BDObject> BDObjects = new HashMap<>();
     HashMap<String,Node> BVmap = new HashMap<>();
+    HashMap<String,String> authExt = new HashMap<>();
+
 
     /**
      *
@@ -82,6 +85,7 @@ public class xmi_transform {
     public HashMap<String, StreamResult> convertData(HashMap<Profile,List<Profile>>  IGM_CGM, List<String> defaultBDIds)
             throws TransformerException, IOException, SAXException, ParserConfigurationException, URISyntaxException {
 
+        setAuthExt();
         parseEcore();
         HashMap<String,StreamResult> xmi_map = new HashMap<>();
         for(Profile key : IGM_CGM.keySet()){
@@ -384,51 +388,28 @@ public class xmi_transform {
         }
 
 
-
         cleanXml(target);
-
 
        return  target;
 
     }
 
+    private void setAuthExt(){
+        authExt.put("rdf","http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+        authExt.put("cim", "http://iec.ch/TC57/2013/CIM-schema-cim16#");
+        authExt.put("entsoe", "http://entsoe.eu/CIM/SchemaExtension/3/1#");
+        authExt.put("md","http://iec.ch/TC57/61970-552/ModelDescription/1#");
+        authExt.put("xmlns","http://www.w3.org/2000/xmlns/");
+        authExt.put("brlnd","http://brolunda.com/ecore-converter#");
+    }
+
     private void cleanXml(Document document){
+
         Element root = document.getDocumentElement();
-        Set<String> forbiddenExt = new HashSet<>();
-        for(int i=root.getAttributes().getLength()-1; i>=0;i--){
-            if(root.getAttributes().item(i).getNodeType()== Node.ATTRIBUTE_NODE){
-                switch (root.getAttributes().item(i).getLocalName()){
-                    case "md":
-                    case "cim":
-                    case "entsoe":
-                    case "rdf":
-                    case "brlnd":
-                        break;
 
-                    default:
-
-                        forbiddenExt.add(root.getAttributes().item(i).getNodeValue());
-                        root.getAttributes().removeNamedItemNS(root.getAttributes().item(i).getNamespaceURI(),root.getAttributes().item(i).getLocalName());
-
-                }
-            }
-        }
-
-        for(String s:forbiddenExt){
-            NodeList other = document.getElementsByTagNameNS(s,"*");
-            Node[] removed =convertToArray(other);
-            for (Node node : removed) {
-                node.getParentNode().removeChild(node);
-            }
-        }
-
-
-        NodeList nodeList = document.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","*");
-        Node[] nodes = convertToArray(nodeList);
-
-
-        for (Node node : nodes) {
-            if(!StringUtils.isEmpty(node.getLocalName())){
+        Node[] allNodes = convertToArray(root.getElementsByTagName("*"));
+        for (Node node : allNodes) {
+            if(node.getNamespaceURI()!=null &&(!authExt.values().contains(node.getNamespaceURI())||( node.getNamespaceURI().contains("cim")&&!StringUtils.isEmpty(node.getLocalName())))){
                 String name = node.getLocalName();
                 if(!classes.contains(name)){
                     if(node.getParentNode()!=null)
@@ -437,6 +418,15 @@ public class xmi_transform {
                 }
             }
         }
+
+        for(int i=root.getAttributes().getLength()-1;i>=0;i--){
+            if(root.getAttributes().item(i).getNodeType()== Node.ATTRIBUTE_NODE) {
+                if(!authExt.keySet().contains(root.getAttributes().item(i).getLocalName())){
+                    root.getAttributes().removeNamedItemNS(root.getAttributes().item(i).getNamespaceURI(),root.getAttributes().item(i).getLocalName());
+                }
+            }
+        }
+
 
         NodeList season = document.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","Season.endDate");
         Node[] seNodes = convertToArray(season);
@@ -474,7 +464,7 @@ public class xmi_transform {
         return copy;
     }
 
-   /* private static void printDocument(Document doc, String name) throws  TransformerException {
+    /*private static void printDocument(Document doc, String name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
