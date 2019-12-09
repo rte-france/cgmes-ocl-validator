@@ -219,22 +219,23 @@ public class xmi_transform {
         addFullModelInfo(nodeListsv.item(0).getOwnerDocument(),"SV",business);
         addFullModelInfo(nodeListEqBd.item(0).getOwnerDocument(),"EQBD",null);
         addFullModelInfo(nodeListTpBd.item(0).getOwnerDocument(),"TPBD",null);
-
-
+        
         mergeBoundaries(nodeListTpBd,nodeListEqBd);
 
         HashMap<String,Node> eq_ = new HashMap<>();
-        for(int i=0; i<nodeListeq.getLength();i++){
-            if(nodeListeq.item(i).getLocalName()!=null){
-                Node my_eq = nodeListeq.item(i);
-                if(!nodeListeq.item(i).getLocalName().contains("FullModel")) {
+
+        Node[] EQnodes = convertToArray(nodeListeq);
+        for (Node eQnode : EQnodes) {
+            if(!StringUtils.isEmpty(eQnode.getLocalName())){
+                if(!StringUtils.contains(eQnode.getLocalName(),"FullModel")){
                     Node ext = target.createElement("brlnd:ModelObject." + brlndType.get(EQ.type.toString()));
                     ((Element) ext).setAttribute("rdf:resource", EQ.id);
-                    my_eq.appendChild(ext);
+                    eQnode.appendChild(ext);
                 }
-                eq_.put(nodeListeq.item(i).getAttributes().item(0).getNodeValue(),nodeListeq.item(i));
+                eq_.put(eQnode.getAttributes().item(0).getNodeValue(),eQnode);
             }
         }
+
 
         addObject(target,nodeListssh,"md:FullModel",true);
         addObject(target,nodeListtp,"md:FullModel",true);
@@ -247,64 +248,68 @@ public class xmi_transform {
 
 
         HashMap<String,Node> declaredBV = new HashMap<>();
-        NodeList baseVoltage = nodeListeq.item(0).getOwnerDocument().getElementsByTagName("cim:BaseVoltage");
-        for(int i=0; i<baseVoltage.getLength();i++){
-            if(baseVoltage.item(i).getLocalName()!=null){
-                String id = baseVoltage.item(i).getAttributes().item(0).getNodeValue();
-                declaredBV.put(id,baseVoltage.item(i));
+        Node[] baseVoltage_ = convertToArray(target.getElementsByTagName("cim:BaseVoltage"));
+        for (Node node : baseVoltage_) {
+            if(!StringUtils.isEmpty(node.getLocalName())){
+                String id = node.getAttributes().item(0).getNodeValue();
+                declaredBV.put(id,node);
             }
         }
 
-        NodeList transf = nodeListeq.item(0).getOwnerDocument().getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","TransformerEnd.BaseVoltage");
+        Node[] transf_ = convertToArray(target.getElementsByTagNameNS("http://iec.ch/TC57/2013/CIM-schema-cim16#","TransformerEnd.BaseVoltage"));
 
-        for(int i=0;i<transf.getLength();i++){
-            if(transf.item(i).getLocalName()!=null){
-                String id = transf.item(i).getAttributes().item(0).getNodeValue().replace("#","");
+        for (Node node : transf_) {
+            if(!StringUtils.isEmpty(node.getLocalName())){
+                String id = node.getAttributes().item(0).getNodeValue().replace("#","");
                 if(!declaredBV.containsKey(id)){
                     if(BVmap.containsKey(id)){
-                        Node node = target.importNode(BVmap.get(id),true);
-                        target.getDocumentElement().appendChild(node);
-                        declaredBV.put(id,node);
+                        Node node1 = target.importNode(BVmap.get(id),true);
+                        target.getDocumentElement().appendChild(node1);
+                        declaredBV.put(id,node1);
                     }
                 }
             }
         }
 
 
-        NodeList voltageLevels = nodeListeq.item(0).getOwnerDocument().getElementsByTagName("cim:VoltageLevel");
-        for(int i=0;i<voltageLevels.getLength();i++){
-            if ((voltageLevels.item(i).getLocalName()!=null) && (voltageLevels.item(i).hasChildNodes())){
-                for (int c=0;c<voltageLevels.item(i).getChildNodes().getLength();c++){
-                    if (StringUtils.contains(voltageLevels.item(i).getChildNodes().item(c).getLocalName(),"VoltageLevel.BaseVoltage")){
-                        String id = voltageLevels.item(i).getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
+        Node[] voltageLevels_ = convertToArray(target.getElementsByTagName("cim:VoltageLevel"));
+        for (Node node : voltageLevels_) {
+            if(!StringUtils.isEmpty(node.getLocalName())&& node.hasChildNodes()){
+                for (int c=0;c<node.getChildNodes().getLength();c++){
+                    if (StringUtils.contains(node.getChildNodes().item(c).getLocalName(),"VoltageLevel.BaseVoltage")){
+                        String id = node.getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                         if (!declaredBV.containsKey(id) && BVmap.containsKey(id)){
-                            Node node = target.importNode(BVmap.get(id),true);
-                            target.getDocumentElement().appendChild(node);
-                            declaredBV.put(id,node);
+                            Node node1 = target.importNode(BVmap.get(id),true);
+                            target.getDocumentElement().appendChild(node1);
+                            declaredBV.put(id,node1);
                         }
                     }
                 }
             }
         }
 
-        for(int i=0; i<nodeListssh.getLength();i++){
-            if(nodeListssh.item(i).getLocalName()!=null){
-                String id = nodeListssh.item(i).getAttributes().item(0).getNodeValue().replaceAll("#","");
-                if(eq_.containsKey(id) && !nodeListssh.item(i).getLocalName().contains("FullModel")){
-                    if(nodeListssh.item(i).hasChildNodes()){
-                        for(int c=0; c<nodeListssh.item(i).getChildNodes().getLength();c++){
-                            if(nodeListssh.item(i).getChildNodes().item(c).getLocalName()!=null) {
-                                Node node = eq_.get(id).getOwnerDocument().importNode(nodeListssh.item(i).getChildNodes().item(c),true);
-                                eq_.get(id).appendChild(node);
+        Node[] SSHnodes = convertToArray(nodeListssh);
+        for (Node node : SSHnodes) {
+            if(!StringUtils.isEmpty(node.getLocalName())){
+                String id = node.getAttributes().item(0).getNodeValue().replaceAll("#","");
+                if(eq_.containsKey(id) && !node.getLocalName().contains("FullModel")){
+                    if(node.hasChildNodes()){
+                        for(int c=0; c<node.getChildNodes().getLength();c++){
+                            if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName())){
+                                Node ext = node.getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
+                                ((Element) ext).setAttribute("rdf:resource", SSH.id);
+                                node.appendChild(ext);
+                                Node node1 = target.importNode(node.getChildNodes().item(c),true);
+                                eq_.get(id).appendChild(node1);
                             }
+
                         }
-                        Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
-                        ((Element) ext).setAttribute("rdf:resource", SSH.id);
-                        eq_.get(id).appendChild(ext);
+
                     }
                 }
             }
         }
+
 
         HashMap<String,Node> TPs2add = new HashMap<>();
 
@@ -335,6 +340,7 @@ public class xmi_transform {
 
         }
 
+
         for(String t: TPs2add.keySet()){
             String bv;
             if(BDObjects.containsKey(t)){
@@ -358,25 +364,25 @@ public class xmi_transform {
         }
 
 
-
-        for(int i=0; i<nodeListsv.getLength();i++){
-            if(nodeListsv.item(i).getLocalName()!=null){
-                if(!nodeListsv.item(i).getLocalName().contains("FullModel")) {
-                    String id = nodeListsv.item(i).getAttributes().item(0).getNodeValue().replace("#","");
+        Node[] SVnodes = convertToArray(nodeListsv);
+        for (Node sVnode : SVnodes) {
+            if(!StringUtils.isEmpty(sVnode.getLocalName())){
+                if(!StringUtils.contains(sVnode.getLocalName(),"FullModel")){
+                    String id= sVnode.getAttributes().item(0).getNodeValue().replace("#","");
                     if(eq_.containsKey(id)){
-                        if(nodeListsv.item(i).hasChildNodes()){
-                            NodeList childs = nodeListsv.item(i).getChildNodes();
+                        if(sVnode.hasChildNodes()){
+                            NodeList childs = sVnode.getChildNodes();
                             for(int c=0; c<childs.getLength();c++){
                                 if(childs.item(c).getLocalName()!=null){
-                                    Node node = eq_.get(id).getOwnerDocument().importNode(childs.item(c),true);
+                                    Node node = target.importNode(childs.item(c),true);
                                     eq_.get(id).appendChild(node);
                                 }
                             }
                         }
                     }
                     else{
-                        Node my_node = addNode(target, nodeListsv.item(i));
-                        if(nodeListsv.item(i).getLocalName().contains("TopologicalIsland") || nodeListsv.item(i).getLocalName().contains("SvStatus")){
+                        Node my_node = addNode(target, sVnode);
+                        if(sVnode.getLocalName().contains("TopologicalIsland") || sVnode.getLocalName().contains("SvStatus")){
                             Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
                             ((Element) ext).setAttribute("rdf:resource", SV.id);
                             my_node.appendChild(ext);
