@@ -59,17 +59,22 @@ public class xmi_transform {
         LOGGER=Logger.getLogger(ocl.OCLEvaluator.class.getName());
     }
 
-    class BDObject{
+    private class BDObject{
         Node TPn;
         Node EQn;
         Node CNn;
         Node BVn;
     }
 
-    Set<String> classes = new HashSet<>();
-    HashMap<String,BDObject> BDObjects = new HashMap<>();
-    HashMap<String,Node> BVmap = new HashMap<>();
-    HashMap<String,String> authExt = new HashMap<>();
+    private Set<String> classes = new HashSet<>();
+    private HashMap<String, Integer> ruleLevels= new HashMap<>();
+    private HashMap<String,BDObject> BDObjects = new HashMap<>();
+    private HashMap<String,Node> BVmap = new HashMap<>();
+    private HashMap<String,String> authExt = new HashMap<>();
+
+    HashMap<String, Integer> getRuleLevels(){
+        return ruleLevels;
+    }
 
 
     /**
@@ -133,13 +138,10 @@ public class xmi_transform {
             }
 
             Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
-
             LOGGER.info("Merged and cleaned:"+key.xml_name);
 
             resulting_xmi = transformToXmi(merged_xml);
-
             LOGGER.info("Transformed:"+key.xml_name);
-
 
             xmi_map.put(sv_sn.get(0),resulting_xmi);
 
@@ -148,6 +150,11 @@ public class xmi_transform {
 
     }
 
+    /**
+     *
+     * @param name
+     * @return
+     */
     private String getBusinessProcess(String name){
         String business = null;
         Pattern pattern = Pattern.compile("\\_(.*?)\\_.*");
@@ -160,6 +167,14 @@ public class xmi_transform {
         return business;
     }
 
+    /**
+     *
+     * @param profile
+     * @return
+     * @throws IOException
+     * @throws SAXException
+     * @throws ParserConfigurationException
+     */
     private NodeList getNodeList(Profile profile) throws IOException, SAXException, ParserConfigurationException {
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         builderFactory.setNamespaceAware(true);
@@ -400,6 +415,9 @@ public class xmi_transform {
 
     }
 
+    /**
+     *
+     */
     private void setAuthExt(){
         authExt.put("rdf","http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         authExt.put("cim", "http://iec.ch/TC57/2013/CIM-schema-cim16#");
@@ -409,6 +427,10 @@ public class xmi_transform {
         authExt.put("brlnd","http://brolunda.com/ecore-converter#");
     }
 
+    /**
+     *
+     * @param document
+     */
     private void cleanXml(Document document){
 
         Element root = document.getDocumentElement();
@@ -459,7 +481,12 @@ public class xmi_transform {
 
     }
 
-    public  Node[] convertToArray(NodeList list)
+    /**
+     *
+     * @param list
+     * @return
+     */
+    private  Node[] convertToArray(NodeList list)
     {
         int length = list.getLength();
         Node[] copy = new Node[length];
@@ -483,6 +510,13 @@ public class xmi_transform {
         transformer.transform(new DOMSource(doc),new StreamResult(new File("/home/chiaramellomar/EMF_meetings/ocl_validator/models/"+name)));
     }*/
 
+    /**
+     *
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws SAXException
+     * @throws ParserConfigurationException
+     */
     private void parseEcore() throws IOException, URISyntaxException, SAXException, ParserConfigurationException {
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         builderFactory.setNamespaceAware(true);
@@ -512,12 +546,30 @@ public class xmi_transform {
                     }
                 }
             }
-
         }
 
-
+        NodeList nl = doc.getElementsByTagName("details");
+        for (int i=0; i< nl.getLength(); i++){
+            String key = nl.item(i).getAttributes().getNamedItem("key").getNodeValue();
+            if (key!=null) {
+                String value = nl.item(i).getAttributes().getNamedItem("value").getNodeValue();
+                if (value != null) {
+                    Pattern pattern = Pattern.compile("QoCDCv3\\s*Level=(\\d)");
+                    Matcher matcher = pattern.matcher(value);
+                    if (matcher.find()) {
+                        ruleLevels.put(key, new Integer(matcher.group(1)));
+                    }
+                }
+            }
+        }
     }
 
+
+    /**
+     *
+     * @param nodeList
+     * @return
+     */
     private boolean isNb(NodeList nodeList){
         boolean nb = false;
         NodeList fullmodel = nodeList.item(0).getOwnerDocument().getElementsByTagName("md:FullModel");for(int i=0; i<fullmodel.getLength();i++){
@@ -566,8 +618,14 @@ public class xmi_transform {
     }
 
 
-
-
+    /**
+     *
+     * @param doc
+     * @param modelPart_
+     * @param business
+     * @throws IOException
+     * @throws TransformerException
+     */
     private void addFullModelInfo(Document doc, String modelPart_, String business) throws IOException, TransformerException {
 
         NodeList fullmodel = doc.getElementsByTagName("md:FullModel");
@@ -651,7 +709,7 @@ public class xmi_transform {
      * @param doc
      * @param node
      */
-    private Node addNode(Document doc, Node node){
+    private synchronized Node addNode(Document doc, Node node){
         Node nd = doc.getDocumentElement().appendChild(doc.importNode(node,true));
         return nd;
     }

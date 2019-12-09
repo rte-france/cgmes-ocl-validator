@@ -49,6 +49,8 @@ public class XLSWriter {
             cell = row.createCell(colNum++);
             cell.setCellValue("RULE");
             cell = row.createCell(colNum++);
+            cell.setCellValue("LEVEL");
+            cell = row.createCell(colNum++);
             cell.setCellValue("OBJECT");
             cell = row.createCell(colNum++);
             cell.setCellValue("ID");
@@ -61,6 +63,10 @@ public class XLSWriter {
                 cell.setCellValue(res.getSeverity()== Diagnostic.ERROR?"ERROR":"WARNING");
                 cell = row.createCell(colNum++);
                 cell.setCellValue(res.getRule());
+                cell = row.createCell(colNum++);
+                if (res.getLevel()==null)
+                    cell.setCellValue(0);
+                else cell.setCellValue(res.getLevel());
                 cell = row.createCell(colNum++);
                 cell.setCellValue(res.getType());
                 cell = row.createCell(colNum++);
