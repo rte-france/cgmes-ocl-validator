@@ -26,10 +26,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 
+import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
@@ -309,16 +311,19 @@ public class xmi_transform {
                 String id = node.getAttributes().item(0).getNodeValue().replaceAll("#","");
                 if(eq_.containsKey(id) && !node.getLocalName().contains("FullModel")){
                     if(node.hasChildNodes()){
+                        Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
+                        ((Element) ext).setAttribute("rdf:resource", SSH.id);
+
                         for(int c=0; c<node.getChildNodes().getLength();c++){
                             if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName())){
-                                Node ext = node.getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
-                                ((Element) ext).setAttribute("rdf:resource", SSH.id);
-                                node.appendChild(ext);
+
                                 Node node1 = target.importNode(node.getChildNodes().item(c),true);
                                 eq_.get(id).appendChild(node1);
+
                             }
 
                         }
+                        eq_.get(id).appendChild(ext);
 
                     }
                 }
@@ -411,6 +416,7 @@ public class xmi_transform {
 
         cleanXml(target);
 
+
        return  target;
 
     }
@@ -497,7 +503,7 @@ public class xmi_transform {
         return copy;
     }
 
-    /*private static void printDocument(Document doc, String name) throws  TransformerException {
+   /* private static void printDocument(Document doc, String name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
