@@ -240,6 +240,8 @@ public class xmi_transform {
         mergeBoundaries(nodeListTpBd,nodeListEqBd);
 
         HashMap<String,Node> eq_ = new HashMap<>();
+        boolean isusingCN = false;
+        isusingCN = (convertToArray(target.getElementsByTagNameNS(authExt.get("cim"),"Terminal.ConnectivityNode")).length!=0);
 
         Node[] EQnodes = convertToArray(nodeListeq);
         for (Node eQnode : EQnodes) {
@@ -371,7 +373,7 @@ public class xmi_transform {
                 }
                 addNode(target,BDObjects.get(t).TPn);
                 addNode(target,BDObjects.get(t).EQn);
-                if(isNb)
+                if(isNb == true || isusingCN == true)
                     addNode(target,BDObjects.get(t).CNn);
             }
             else{
@@ -415,6 +417,7 @@ public class xmi_transform {
 
 
         cleanXml(target);
+
 
 
        return  target;
@@ -503,7 +506,7 @@ public class xmi_transform {
         return copy;
     }
 
-   /* private static void printDocument(Document doc, String name) throws  TransformerException {
+    /*private static void printDocument(Document doc, String name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
