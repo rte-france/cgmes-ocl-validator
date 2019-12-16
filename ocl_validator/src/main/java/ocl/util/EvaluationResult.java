@@ -59,20 +59,30 @@ public class EvaluationResult{
         this.name = name;
     }
 
+    public Integer getLevel() {
+        return level;
+    }
+
+    public void setLevel(Integer level) {
+        this.level = level;
+    }
+
     private String type;
     private String id;
     private String name;
+    private Integer level;
 
-    public EvaluationResult(int severity, String rule, String type, String id, String name) {
+    public EvaluationResult(int severity, String rule, Integer level, String type, String id, String name) {
         this.severity = severity;
         this.rule = rule;
         this.type = type;
         this.id = id;
         this.name = name;
+        this.level = level;
     }
 
     public String toString(){
-        String s = String.format("%-35s: %-25s %-37s %-30s", this.rule, this.type, (id!=null)?id:"", (name!=null)?name:"");
+        String s = String.format("%-35s %-5s: %-25s %-37s %-30s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"");
         return s;
     }
 

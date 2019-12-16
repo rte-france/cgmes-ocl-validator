@@ -81,7 +81,7 @@ public class OCLEvaluator {
      *
      * @return Diagnostic object
      */
-    public Diagnostic evaluate(StreamResult xmi){
+    public synchronized Diagnostic evaluate(StreamResult xmi){
         InputStream inputStream = new ByteArrayInputStream(xmi.getOutputStream().toString().getBytes());
 
         HashMap<String, Boolean> options = new HashMap<>();
@@ -138,8 +138,8 @@ public class OCLEvaluator {
     public Map<String, List<EvaluationResult>> assessRules(File where){
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
-        ocl.IGM_CGM_preparation my_prep = new ocl.IGM_CGM_preparation();
-        ocl.xmi_transform my_transf = new ocl.xmi_transform();
+        IGM_CGM_preparation my_prep = new IGM_CGM_preparation();
+        xmi_transform my_transf = new xmi_transform();
 
         HashMap<String, StreamResult> xmi_list = new HashMap<>();
 
@@ -153,15 +153,16 @@ public class OCLEvaluator {
         try {
             xmi_list= my_transf.convertData(my_prep.IGM_CGM, my_prep.defaultBDIds);
             LOGGER.info("XMI transformation done!");
-        } catch (TransformerException e) {
+        } catch (TransformerException | ParserConfigurationException e) {
             e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (SAXException | URISyntaxException | IOException e) {
             e.printStackTrace();
         }
+        HashMap<String, Integer> ruleLevels = my_transf.getRuleLevels();
+
+        my_prep = null; // save memory
+        my_transf = null ; // save memory
+        
 
         OCLEvaluator evaluator = new OCLEvaluator();
         Diagnostic diagnostics;
@@ -176,7 +177,7 @@ public class OCLEvaluator {
             if (diagnostics==null) {
                 LOGGER.severe("Problem with input xmi for model: " + key);
             } else {
-                List<EvaluationResult> res = getErrors(diagnostics);
+                List<EvaluationResult> res = getErrors(diagnostics, ruleLevels);
                 printError(res);
                 results.put(key, res);
 
@@ -185,6 +186,7 @@ public class OCLEvaluator {
                 else
                     LOGGER.info("All constraints are valid for model:" + key);
             }
+            xmi_list.put(key,null); // to free memory
         }
 
         return results;
@@ -248,9 +250,10 @@ public class OCLEvaluator {
      * @param diagnostics
      * @return
      */
-    public List<EvaluationResult> getErrors(Diagnostic diagnostics) {
+    public List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String,Integer> ruleLevels) {
         //FIXME: severity level is incorrect  (always error); missing rule level
         List<EvaluationResult> results = new ArrayList<>();
+        if (diagnostics==null) return results;
         for (Diagnostic childDiagnostic: diagnostics.getChildren()){
             List<?> data = childDiagnostic.getData();
             EObject object = (EObject) data.get(0);
@@ -264,6 +267,7 @@ public class OCLEvaluator {
                     String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
                     results.add(new EvaluationResult(childDiagnostic.getSeverity(),
                             matcher.group(1),
+                            ruleLevels.get(matcher.group(1)),
                             object.eClass().getName(),
                             (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
                             name
@@ -275,6 +279,7 @@ public class OCLEvaluator {
                 while (matcher.find()) {
                     results.add(new EvaluationResult(childDiagnostic.getSeverity(),
                             matcher.group(1),
+                            ruleLevels.get(matcher.group(1)),
                             object.eClass().getName(),
                             (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
                             null
