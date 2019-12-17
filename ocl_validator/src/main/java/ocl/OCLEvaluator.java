@@ -82,7 +82,12 @@ public class OCLEvaluator {
      * @return Diagnostic object
      */
     public synchronized Diagnostic evaluate(StreamResult xmi){
-        InputStream inputStream = new ByteArrayInputStream(xmi.getOutputStream().toString().getBytes());
+        InputStream inputStream = null;
+        try {
+            inputStream = new ByteArrayInputStream(xmi.getOutputStream().toString().getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
 
         HashMap<String, Boolean> options = new HashMap<>();
         options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
