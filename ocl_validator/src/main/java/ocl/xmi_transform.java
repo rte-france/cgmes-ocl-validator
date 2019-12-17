@@ -26,10 +26,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.*;
 
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -73,6 +70,11 @@ public class xmi_transform {
     private HashMap<String,BDObject> BDObjects = new HashMap<>();
     private HashMap<String,Node> BVmap = new HashMap<>();
     private HashMap<String,String> authExt = new HashMap<>();
+
+    private HashMap<String,String> xmiXmlns = new HashMap<>();
+
+    private boolean isNb = false;
+    private boolean isShortCircuit = false;
 
     HashMap<String, Integer> getRuleLevels(){
         return ruleLevels;
@@ -141,8 +143,8 @@ public class xmi_transform {
 
             Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
             LOGGER.info("Merged and cleaned:"+key.xml_name);
-
-            resulting_xmi = transformToXmi(merged_xml);
+            resulting_xmi = xmiTest(merged_xml);
+            //resulting_xmi = transformToXmi(merged_xml);
             LOGGER.info("Transformed:"+key.xml_name);
 
             xmi_map.put(sv_sn.get(0),resulting_xmi);
@@ -195,6 +197,15 @@ public class xmi_transform {
 
     }
 
+    private NodeList getNodeList(File file) throws ParserConfigurationException, IOException, SAXException {
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        builderFactory.setNamespaceAware(true);
+        DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
+        Document document = documentBuilder.parse(file);
+        NodeList nodeList = document.getDocumentElement().getChildNodes();
+        return nodeList;
+    }
+
     /**
      *
      * @param eqbd
@@ -226,7 +237,7 @@ public class xmi_transform {
         NodeList nodeListsv = correctDeps(getNodeList(SV), SV.DepToBeReplaced,defaultBDIds.get(1));
         NodeList nodeListEqBd = getNodeList(eqbd);
         NodeList nodeListTpBd = getNodeList(tpbd);
-        boolean isNb = isNb(nodeListeq);
+        isNb = isNb(nodeListeq);
         Document target = nodeListeq.item(0).getOwnerDocument();
         target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
 
@@ -375,6 +386,7 @@ public class xmi_transform {
                 addNode(target,BDObjects.get(t).EQn);
                 if(isNb == true || isusingCN == true)
                     addNode(target,BDObjects.get(t).CNn);
+
             }
             else{
                 Node ext_ = TPs2add.get(t).getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
@@ -417,10 +429,167 @@ public class xmi_transform {
 
 
         cleanXml(target);
+        nodeListeq = null;
+        nodeListtp = null;
+        nodeListssh = null;
+        nodeListsv = null;
+        EQnodes = null;
+        SVnodes = null;
+        TPs2add = null;
+        SSHnodes = null;
+        voltageLevels_=null;
+        transf_=null;
 
 
 
        return  target;
+
+    }
+
+
+    private StreamResult xmiTest(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
+        xmiXmlns = null;
+        xmiXmlns = new HashMap<>();
+        HashMap<String,String> sub = parseEcoreXmi();
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = builderFactory.newDocumentBuilder();
+        Document xmi = builder.newDocument();
+
+        HashMap<String,Integer> numbering = new HashMap<>();
+        Node[] objects = convertToArray(target.getDocumentElement().getChildNodes());
+        int count = 0;
+        for (Node object : objects) {
+            if(!StringUtils.isEmpty(object.getLocalName())){
+                if(object.hasAttributes()){
+                    numbering.put(object.getAttributes().item(0).getNodeValue(),count);
+                    count+=1;
+                }
+            }
+        }
+        Node[] lines = convertToArray(target.getDocumentElement().getChildNodes());
+        Node[] basics = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("basic_model"))));
+
+
+
+
+        xmi.appendChild(xmi.createElementNS("http://Model/1.0/CGMES", "CGMES:DataSet"));
+        for(String s : authExt.keySet()){
+            xmi.getDocumentElement().setAttributeNS(authExt.get("xmlns"),"xmlns:"+s,authExt.get(s) );
+        }
+
+        for(String s: xmiXmlns.keySet()){
+            if(s.contains("schemaLocation"))
+                xmi.getDocumentElement().setAttributeNS(xmiXmlns.get("xsi"),"xsi:"+s,xmiXmlns.get(s) );
+            else{
+                xmi.getDocumentElement().setAttributeNS(authExt.get("xmlns"),"xmlns:"+s ,xmiXmlns.get(s) );
+            }
+
+        }
+
+        xmi.getDocumentElement().setAttribute("type","igm");
+        xmi.getDocumentElement().setAttribute("validationScope", "QOCDCV3_1");
+        xmi.getDocumentElement().setAttribute("excludeProvedRules", "false");
+        xmi.getDocumentElement().setAttribute("local_level_validation", "true");
+        xmi.getDocumentElement().setAttribute("global_level_validation", "true");
+        xmi.getDocumentElement().setAttribute("emf_level_validation", "true");
+        xmi.getDocumentElement().setAttribute("isEQoperation", Boolean.toString(isNb));
+        xmi.getDocumentElement().setAttribute("isEQshortCircuit", Boolean.toString(isShortCircuit));
+
+        for (Node basic : basics) {
+            if(!StringUtils.isEmpty(basic.getLocalName())){
+                xmi.getDocumentElement().appendChild(xmi.importNode(basic,true));
+
+            }
+        }
+
+        for (Node line : lines) {
+            if(!StringUtils.isEmpty(line.getLocalName())){
+                Node datasetmember = xmi.createElement("DataSetMember");
+                ((Element) datasetmember).setAttribute("xsi:type",sub.get(line.getLocalName())+":"+line.getLocalName());
+                ((Element) datasetmember).setAttribute("mRID",line.getAttributes().item(0).getNodeValue());
+
+                Node[] childs = convertToArray(line.getChildNodes());
+                for (Node child : childs) {
+                    if(!StringUtils.contains(child.getNodeName(),"#")){
+                        if(child.hasAttributes()){
+                            String refId = child.getAttributes().getNamedItem("rdf:resource").getNodeValue().replaceAll("#","");
+                            if(numbering.containsKey(refId)){
+                                String already = "";
+                                if(datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1])!=null){
+                                    already = datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1]).getNodeValue()+" ";
+                                }
+                                ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], already+"//@DataSetMember."+String.valueOf(numbering.get(refId)));
+                            }
+                            else{
+                                String literal = refId.replaceAll(authExt.get("cim"),"");
+                                literal=literal.substring(literal.lastIndexOf(".")+1);
+                                ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], literal);
+                            }
+
+                        }
+                        else{
+
+                            ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1],child.getTextContent());
+                        }
+                    }
+                }
+                datasetmember.setTextContent(String.valueOf(numbering.get(line.getAttributes().item(0).getNodeValue())));
+                xmi.getDocumentElement().appendChild(datasetmember);
+            }
+            //System.exit(0);
+        }
+
+
+
+        //LOGGER.info("print");
+        //printDocument(xmi,"xmi_test.xml");
+        StreamResult result = convertToStream(xmi);
+        xmi = null;
+        lines = null;
+        //System.out.println(test.getOutputStream().toString());
+        return result;
+    }
+
+    private HashMap<String, String> parseEcoreXmi() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
+        HashMap<String,String> sub = new HashMap<>();
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        builderFactory.setNamespaceAware(true);
+        DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
+        Document doc = documentBuilder.parse(OCLEvaluator.getConfig().get("ecore_model"));
+        Node[] subpackages = convertToArray(doc.getElementsByTagName("eSubpackages"));
+
+
+        for (Node subpackage : subpackages) {
+            String name = subpackage.getAttributes().getNamedItem("name").getNodeValue();
+            String nsUri = subpackage.getAttributes().getNamedItem("nsURI").getNodeValue();
+            xmiXmlns.put(name,nsUri);
+            NodeList childs = subpackage.getChildNodes();
+            for(int c=0; c<childs.getLength();c++){
+                if(StringUtils.contains(childs.item(c).getLocalName(),"eClassifiers")){
+                    sub.put(childs.item(c).getAttributes().getNamedItem("name").getNodeValue(),name);
+                }
+            }
+
+        }
+
+        String schema = " ";
+        for(String s: xmiXmlns.keySet()){
+            schema+= xmiXmlns.get(s);
+            schema+= " "+xmiXmlns.get(s).replace("http://Model/1.0","cgmes61970oclModel.ecore#/")+" ";
+        }
+        xmiXmlns.put("xmi","http://www.omg.org/spec/XMI/20131001");
+        xmiXmlns.put("xsi","http://www.w3.org/2001/XMLSchema-instance");
+        xmiXmlns.put("ecore","http://www.eclipse.org/emf/2002/Ecore");
+        xmiXmlns.put("uml","http://www.omg.org/spec/UML/20131001");
+
+
+        xmiXmlns.put("schemaLocation", schema);
+
+
+
+
+
+        return sub;
 
     }
 
@@ -487,7 +656,7 @@ public class xmi_transform {
                 }
             }
         }
-
+        root.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
     }
 
     /**
@@ -506,7 +675,7 @@ public class xmi_transform {
         return copy;
     }
 
-    /*private static void printDocument(Document doc, String name) throws  TransformerException {
+    private static void printDocument(Document doc, String name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
@@ -517,7 +686,20 @@ public class xmi_transform {
 
 
         transformer.transform(new DOMSource(doc),new StreamResult(new File("/home/chiaramellomar/EMF_meetings/ocl_validator/models/"+name)));
-    }*/
+    }
+
+    private StreamResult convertToStream(Document doc) throws TransformerException {
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+        transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+        StreamResult result = new StreamResult(new ByteArrayOutputStream());
+        transformer.transform(new DOMSource(doc), result);
+        return result;
+    }
 
     /**
      *
@@ -591,6 +773,8 @@ public class xmi_transform {
                             if(localName.contains("Model.profile")){
                                 if (childs.item(c).getTextContent().contains("EquipmentOperation"))
                                     nb=true;
+                                if (childs.item(c).getTextContent().contains("EquipmentShortCircuit"))
+                                    isShortCircuit = true;
                             }
 
                         }
