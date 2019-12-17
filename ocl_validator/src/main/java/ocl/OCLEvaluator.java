@@ -264,12 +264,12 @@ public class OCLEvaluator {
                 msg = childDiagnostic.getMessage();
                 matcher = pattern.matcher(msg);
                 while (matcher.find()) {
-                    String name = (object.eClass().getEStructuralFeature("name") != null) ? object.eGet(object.eClass().getEStructuralFeature("name")).toString() : null;
+                    String name = (object.eClass().getEStructuralFeature("name") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("name"))) : null;
                     results.add(new EvaluationResult(childDiagnostic.getSeverity(),
                             matcher.group(1),
                             ruleLevels.get(matcher.group(1)),
                             object.eClass().getName(),
-                            (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
+                            (object.eClass().getEStructuralFeature("mRID")!=null)?String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
                             name
                     ));
                 }
@@ -281,7 +281,7 @@ public class OCLEvaluator {
                             matcher.group(1),
                             ruleLevels.get(matcher.group(1)),
                             object.eClass().getName(),
-                            (object.eClass().getEStructuralFeature("mRID")!=null)?object.eGet(object.eClass().getEStructuralFeature("mRID")).toString():null,
+                            (object.eClass().getEStructuralFeature("mRID")!=null)?String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
                             null
                     ));
                 }
