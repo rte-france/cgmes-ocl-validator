@@ -327,8 +327,7 @@ public class xmi_transform {
                         ((Element) ext).setAttribute("rdf:resource", SSH.id);
 
                         for(int c=0; c<node.getChildNodes().getLength();c++){
-                            if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName())){
-
+                            if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName()) && !StringUtils.contains(node.getChildNodes().item(c).getLocalName(),"name")){
                                 Node node1 = target.importNode(node.getChildNodes().item(c),true);
                                 eq_.get(id).appendChild(node1);
 
@@ -351,7 +350,7 @@ public class xmi_transform {
                 if(eq_.containsKey(id) && !nodeListtp.item(i).getLocalName().contains("FullModel")){
                     if(nodeListtp.item(i).hasChildNodes()){
                         for(int c=0; c<nodeListtp.item(i).getChildNodes().getLength();c++){
-                            if(nodeListtp.item(i).getChildNodes().item(c).getLocalName()!=null) {
+                            if(nodeListtp.item(i).getChildNodes().item(c).getLocalName()!=null && !StringUtils.contains(nodeListtp.item(i).getChildNodes().item(c).getLocalName(),"name")) {
                                 Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
                                 ((Element) ext).setAttribute("rdf:resource", TP.id);
                                 Node node = eq_.get(id).getOwnerDocument().importNode(nodeListtp.item(i).getChildNodes().item(c),true);
@@ -539,7 +538,12 @@ public class xmi_transform {
                                 }
                                 if(StringUtils.isEmpty(literal))
                                     literal="";
-                                ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], literal);
+                                String already = "";
+                                if(datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1])!=null){
+                                    already = datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1]).getNodeValue()+" ";
+                                }
+
+                                ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], already+literal);
 
                             }
 
@@ -554,7 +558,6 @@ public class xmi_transform {
                 xmi.getDocumentElement().appendChild(datasetmember);
             }
         }
-
 
 
 
@@ -857,6 +860,9 @@ public class xmi_transform {
                                     for (int l = 1; l <= matcher.groupCount(); l++) {
                                         sourcingTSO_=matcher.group(l);
                                     }
+                                }
+                                if(StringUtils.isEmpty(sourcingTSO_)){
+                                    sourcingTSO_= childs.item(c).getTextContent();
                                 }
                             }
                             if(localName.contains("Model.version")){
