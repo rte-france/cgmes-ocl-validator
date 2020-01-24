@@ -103,11 +103,7 @@ public class xmi_transform {
             Profile EQBD = null;
             Profile TPBD = null;
             List<String> sv_sn = new ArrayList<>();
-            List<String> eq_sn = new ArrayList<>();
-            List<String> tp_sn = new ArrayList<>();
-            List<String> ssh_sn = new ArrayList<>();
-            List<String> eqbd_sn = new ArrayList<>();
-            List<String> tpbd_sn = new ArrayList<>();
+
 
             Profile EQ = null;
             Profile SSH = null;
@@ -119,23 +115,18 @@ public class xmi_transform {
                 switch (value.type){
                     case EQ:
                         EQ = value;
-                        eq_sn.add(getSimpleNameNoExt(value));
                         break;
                     case TP:
                         TP = value;
-                        tp_sn.add(getSimpleNameNoExt(value));
                         break;
                     case SSH:
                         SSH = value;
-                        ssh_sn.add(getSimpleNameNoExt(value));
                         break;
                     case other:
                         if(value.file.getName().contains("_EQBD_")){
                             EQBD=value;
-                            eqbd_sn.add(getSimpleNameNoExt(value));
                         } else{
                             TPBD=value;
-                            tpbd_sn.add(getSimpleNameNoExt(value));
                         }
                         break;
                 }
@@ -559,8 +550,7 @@ public class xmi_transform {
             }
         }
 
-
-
+        
         StreamResult result = convertToStream(xmi);
         xmi = null;
         lines = null;
@@ -1014,15 +1004,6 @@ public class xmi_transform {
         return  commander;
     }
 
-    /**
-     *
-     * @param name
-     * @return
-     */
-    private InputStream getXslt(String name){
-        InputStream xslt = this.getClass().getClassLoader().getResourceAsStream(name);
-        return xslt;
-    }
 
     /**
      *
@@ -1048,33 +1029,5 @@ public class xmi_transform {
     }
 
 
-
-    /**
-     *
-     * @param merged_xml
-     * @return
-     * @throws TransformerException
-     */
-    public StreamResult transformToXmi(Document merged_xml) throws TransformerException {
-        InputStream xslt = getXslt("cim16_create_xmi_from_cimxml.xslt");
-
-        Transformer transformer = tfactory.newTransformer(new StreamSource(xslt));
-        transformer.setParameter("merged_xml",merged_xml);
-
-        try {
-            transformer.setParameter("ecore",
-                    IOUtils.readFile(ocl.OCLEvaluator.getConfig().get("ecore_model"), StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-        transformer.setParameter("ecore_name", ECORE_FILE);
-
-        transformer.setParameter("type", "igm");
-        StreamResult result = new StreamResult(new ByteArrayOutputStream());
-        transformer.transform(new StreamSource(getCommander()), result);
-        return result;
-    }
 
 }
