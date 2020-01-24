@@ -143,8 +143,7 @@ public class xmi_transform {
 
             Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
             LOGGER.info("Merged and cleaned:"+key.xml_name);
-            resulting_xmi = xmiTest(merged_xml);
-            //resulting_xmi = transformToXmi(merged_xml);
+            resulting_xmi = createXmi(merged_xml);
             LOGGER.info("Transformed:"+key.xml_name);
 
             xmi_map.put(sv_sn.get(0),resulting_xmi);
@@ -407,7 +406,7 @@ public class xmi_transform {
                         if(sVnode.hasChildNodes()){
                             NodeList childs = sVnode.getChildNodes();
                             for(int c=0; c<childs.getLength();c++){
-                                if(childs.item(c).getLocalName()!=null){
+                                if(childs.item(c).getLocalName()!=null && !childs.item(c).getLocalName().contains("name")){
                                     Node node = target.importNode(childs.item(c),true);
                                     eq_.get(id).appendChild(node);
                                 }
@@ -415,6 +414,15 @@ public class xmi_transform {
                         }
                     }
                     else{
+                        if(sVnode.hasChildNodes() && !sVnode.getLocalName().contains("TopologicalIsland")){
+                            Node[] childs = convertToArray(sVnode.getChildNodes());
+                            for (Node child : childs) {
+                                if (child.getLocalName() != null && child.getLocalName().contains("name")) {
+                                    if(child.getParentNode()!=null)
+                                        child.getParentNode().removeChild(child);
+                                }
+                            }
+                        }
                         Node my_node = addNode(target, sVnode);
                         if(sVnode.getLocalName().contains("TopologicalIsland") || sVnode.getLocalName().contains("SvStatus")){
                             Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
@@ -442,12 +450,13 @@ public class xmi_transform {
 
 
 
+
        return  target;
 
     }
 
 
-    private StreamResult xmiTest(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
+    private StreamResult createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
         HashMap<String,String> sub = parseEcoreXmi();
@@ -521,9 +530,17 @@ public class xmi_transform {
                                 ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], already+"//@DataSetMember."+String.valueOf(numbering.get(refId)));
                             }
                             else{
-                                String literal = refId.replaceAll(authExt.get("cim"),"");
-                                literal=literal.substring(literal.lastIndexOf(".")+1);
+                                String literal = null;
+                                for (String s : authExt.keySet()) {
+                                    if(StringUtils.contains(refId,authExt.get(s).replace("#",""))){
+                                        literal = refId.replaceAll(authExt.get(s).replace("#",""), "");
+                                        literal = literal.substring(literal.lastIndexOf(".") + 1);
+                                    }
+                                }
+                                if(StringUtils.isEmpty(literal))
+                                    literal="";
                                 ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], literal);
+
                             }
 
                         }
@@ -536,17 +553,15 @@ public class xmi_transform {
                 datasetmember.setTextContent(String.valueOf(numbering.get(line.getAttributes().item(0).getNodeValue())));
                 xmi.getDocumentElement().appendChild(datasetmember);
             }
-            //System.exit(0);
         }
 
 
 
-        //LOGGER.info("print");
-        //printDocument(xmi,"xmi_test.xml");
+
         StreamResult result = convertToStream(xmi);
         xmi = null;
         lines = null;
-        //System.out.println(test.getOutputStream().toString());
+
         return result;
     }
 
@@ -584,8 +599,6 @@ public class xmi_transform {
 
 
         xmiXmlns.put("schemaLocation", schema);
-
-
 
 
 
@@ -656,6 +669,8 @@ public class xmi_transform {
                 }
             }
         }
+
+
         root.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
     }
 
