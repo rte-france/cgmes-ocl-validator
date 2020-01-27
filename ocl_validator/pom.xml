@@ -21,7 +21,7 @@
 
     <groupId>ocl_validator</groupId>
     <artifactId>ocl_validator</artifactId>
-    <version>1.0-beta</version>
+    <version>1.1</version>
     <build>
         <plugins>
             <plugin>
