@@ -26,3 +26,6 @@ hs_err_pid*
 
 #config
 *.properties
+
+#ecore file
+cgmes61970oclModel.ecore
