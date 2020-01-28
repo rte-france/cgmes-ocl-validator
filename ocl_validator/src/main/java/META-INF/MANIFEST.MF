@@ -1,0 +1,34 @@
+Manifest-Version: 1.0
+Class-Path: org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar org.ec
+ lipse.xtext_2.19.0.v20190902-0737.jar com.google.guava_27.1.0.v201905
+ 17-1946.jar org.eclipse.emf.validation_1.8.0.201812070911.jar org.ecl
+ ipse.emf.ecore_2.19.0.v20190822-1451.jar org.eclipse.emf.ecore.xmi_2.
+ 16.0.v20190528-0725.jar org.eclipse.emf.common_2.16.0.v20190625-1131.
+ jar org.eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar saxon
+ 9ee.jar saxon9ee.jar javax.inject_1.0.0.v20091030.jar javax.xml_1.3.4
+ .v201005080400.jar com.google.gson_2.8.2.v20180104-1110.jar com.googl
+ e.inject_3.0.0.v201605172100.jar org.antlr.runtime_3.2.0.v20110131113
+ 0.jar org.apache.log4j_1.2.15.v201012070815.jar org.eclipse.xpand_2.2
+ .0.v201605260315.jar com.google.guava_27.1.0.v20190517-1946.jar org.e
+ clipse.net4j_4.7.0.v20180530-1201.jar org.eclipse.osgi_3.15.0.v201908
+ 30-1434.jar org.eclipse.ocl_3.10.400.v20190910-0937.jar org.eclipse.x
+ text_2.19.0.v20190902-0737.jar org.eclipse.emf.edit_2.15.0.v20190528-
+ 0725.jar org.eclipse.ocl.pivot_1.9.0.v20190910-0937.jar org.eclipse.e
+ mf.ecore_2.19.0.v20190822-1451.jar org.eclipse.net4j.util_3.8.0.v2018
+ 0530-0909.jar org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar org.ecl
+ ipse.emf.common_2.16.0.v20190625-1131.jar org.eclipse.urischeme_1.0.4
+ 00.v20190621-1448.jar org.eclipse.xtext.util_2.19.0.v20190902-0737.ja
+ r org.eclipse.emf.validation_1.8.0.201812070911.jar org.eclipse.ocl.c
+ ommon_1.8.400.v20190910-0937.jar org.eclipse.emf.ecore.xmi_2.16.0.v20
+ 190528-0725.jar org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar o
+ rg.eclipse.equinox.common_3.10.500.v20190815-1535.jar org.eclipse.equ
+ inox.p2.core_2.6.100.v20190705-1223.jar org.eclipse.ocl.xtext.oclstdl
+ ib_1.9.0.v20190910-0937.jar org.eclipse.equinox.concurrent_1.1.400.v2
+ 0190621-0852.jar org.eclipse.ocl.xtext.oclinecore_1.9.0.v20190910-093
+ 7.jar org.eclipse.ocl.xtext.completeocl_1.9.0.v20190910-0937.jar org.
+ eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar org.eclipse.o
+ cl.pivot_1.9.0.v20190910-0937.jar commons-io-2.6.jar org.apache.log4j
+ _1.2.15.v201012070815.jar org.eclipse.ocl.xtext.completeocl_1.9.0.v20
+ 190910-0937.jar org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar
+Main-Class: ocl.OCLEvaluator
+
