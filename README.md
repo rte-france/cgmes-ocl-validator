@@ -19,10 +19,15 @@ The tool has been tested under Windows and Linux.
 ### Package
 Unzip the installation package wherever you want.
 The installation package contains has the following structure:
+
 ----- config/
+
 ----- inputs/
+
 ----- ocl_validator/
+
 ----- validate.bat
+
 ----- validate.sh
 
 
@@ -33,8 +38,7 @@ be the following: each xml profile instance file has to be in a separate zip fil
 - *(optional)* copy in the directory `config` a CGMES boundary set (same format: each 
 instance as a separate zip). This boundary set will be substituted to the one defined
 in the IGM if this is not the same. This process is similar to what OPDE does.
-- *(optional)* in case validation rules have been updated, a new version can be 
-used to re-process data. It has to replace `config/cgmes61970oclModel.ecore`.
+- **important**: required validation rules are specified in a separare configuration file, it has to be stored into `config/cgmes61970oclModel.ecore`. This configuration file can be obtained from ENTSOe CGM BP group: https://extra.entsoe.eu/CGM/Collaboration/CGMESRelatedDocumentsEMFCGMESTestModels/2019%20QoCDCv3.1%20Prototype%20validation%20results/cgmes61970oclModel.ecore
 
 ## Usage
 ###  Windows users
@@ -59,13 +63,12 @@ For each IGM are reported:
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Copyright
-&copy; ENTSO-E, RTE 2019
-Authors: Lars-Ola Gottfried Österlund, Marco Chiaramello, Jérôme Picault
+&copy; RTE 2019
+Authors: Marco Chiaramello, Jérôme Picault, Lars-Ola Gottfried Österlund
 
 ## License
-to be defined
+Mozilla Public License 2.0
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-Please make sure to update tests as appropriate.
