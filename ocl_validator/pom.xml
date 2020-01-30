@@ -294,14 +294,6 @@
         </dependency>
 
 
-        <dependency>
-            <groupId>net.sf.saxon</groupId>
-            <artifactId>saxon</artifactId>
-            <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/saxon9ee.jar</systemPath>
-        </dependency>
-
     </dependencies>
 
 
