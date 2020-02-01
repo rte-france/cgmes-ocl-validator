@@ -144,16 +144,15 @@
             <artifactId>service</artifactId>
             <version>1.8.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.validation_1.8.0.201812070911.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.emf.validation_1.8.0.201812070911.jar</systemPath>
         </dependency>
-
 
         <dependency>
             <groupId>org.eclipse.ocl.ecore</groupId>
             <artifactId>ocl_ecore</artifactId>
             <version>3.14.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -161,7 +160,7 @@
             <artifactId>ocl_common</artifactId>
             <version>1.8.400</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.common_1.8.400.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.common_1.8.400.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -169,7 +168,7 @@
             <artifactId>ocl</artifactId>
             <version>3.10.400</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl_3.10.400.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl_3.10.400.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -177,7 +176,7 @@
             <artifactId>ocl_pivot</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.pivot_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.pivot_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -185,7 +184,7 @@
             <artifactId>ocl_xtext_completeocl</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.completeocl_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.completeocl_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -193,7 +192,7 @@
             <artifactId>xtext_essentialocl</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -201,7 +200,7 @@
             <artifactId>xtext_oclinecore</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.oclinecore_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.oclinecore_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -209,7 +208,7 @@
             <artifactId>xtext_oclstdlib</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.oclstdlib_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.oclstdlib_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -229,7 +228,7 @@
             <artifactId>xpand</artifactId>
             <version>2.2.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.xpand_2.2.0.v201605260315.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.xpand_2.2.0.v201605260315.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -243,7 +242,7 @@
             <artifactId>xtext_base</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -270,8 +269,6 @@
             <version>2.6.0</version>
         </dependency>
 
-
     </dependencies>
-
 
 </project>
