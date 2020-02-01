@@ -7,7 +7,28 @@ This project is a framework to automatize the validation of CGMES files using OC
 The goal of this tool is to provide some feedback to TSOs and RSCs about the quality
 of data they generate or use.
 
-## Installation
+## Compilation and packaging
+
+### Requirements
+
+- Java >= 1.8. It can be downloaded from https://www.java.com/fr/download/.
+- Maven >= 3.5. it can be downloaded from https://maven.apache.org/download.cgi
+
+Be sure that Java and maven are properly configured.
+
+For Maven, if you are behind a proxy, be sure to set the configuration properly or use a maven repository managed by your organization.
+
+### Compilation
+
+Run the command `mvn clean package` to generate the jar file of the validation library. The generated jar is stored in the `target` folder: `target/ocl_validator-*.jar`
+
+
+### Distributable library with dependencies
+
+Run the command `mvn clean install` to create a redistributable package containing the validator library with required dependencies and scripts to easily launch the validator. The fully packaged validator is stored in the `target` folder:
+`target/ocl_validator-1.1-bin.tar.gz` or `target/ocl_validator-1.1-bin.zip`
+
+## How to run the validator
 
 ### Requirements
 
@@ -16,7 +37,7 @@ It can be downloaded from https://www.java.com/fr/download/.
 
 The tool has been tested under Windows and Linux.
 
-### Package
+### Use the installation package
 Unzip the installation package wherever you want.
 The installation package contains has the following structure:
 

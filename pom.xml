@@ -61,11 +61,9 @@
     <dependencies>
 
         <dependency>
-            <groupId>org.eclipse.emf.ecore</groupId>
-            <artifactId>emf_general</artifactId>
-            <version>2.19.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.ecore_2.19.0.v20190822-1451.jar</systemPath>
+            <groupId>org.eclipse.emf</groupId>
+            <artifactId>org.eclipse.emf.ecore</artifactId>
+            <version>2.20.0</version>
         </dependency>
 
         <dependency>
@@ -101,10 +99,8 @@
 
         <dependency>
             <groupId>com.google.inject</groupId>
-            <artifactId>google_inject</artifactId>
-            <version>3.0.O</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/com.google.inject_3.0.0.v201605172100.jar</systemPath>
+            <artifactId>guice</artifactId>
+            <version>4.2.2</version>
         </dependency>
 
         <dependency>
@@ -114,44 +110,33 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.log4j</groupId>
+            <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
-            <version>1.2.15</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.apache.log4j_1.2.15.v201012070815.jar</systemPath>
+            <version>1.2.17</version>
         </dependency>
 
         <dependency>
-            <groupId>org.antlr.runtime</groupId>
-            <artifactId>org.antlr.runtime</artifactId>
-            <version>3.2.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.antlr.runtime_3.2.0.v201101311130.jar</systemPath>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr-runtime</artifactId>
+            <version>3.2</version>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.emf.common</groupId>
-            <artifactId>emf_common</artifactId>
+            <groupId>org.eclipse.emf</groupId>
+            <artifactId>org.eclipse.emf.common</artifactId>
+            <version>2.17.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.emf</groupId>
+            <artifactId>org.eclipse.emf.ecore.xmi</artifactId>
             <version>2.16.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.common_2.16.0.v20190625-1131.jar</systemPath>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.emf.ecore.xmi</groupId>
-            <artifactId>emf_ecore_xmi</artifactId>
+            <groupId>org.eclipse.emf</groupId>
+            <artifactId>org.eclipse.emf.edit</artifactId>
             <version>2.16.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.ecore.xmi_2.16.0.v20190528-0725.jar</systemPath>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.eclipse.emf.edit</groupId>
-            <artifactId>emf_edit</artifactId>
-            <version>2.15.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.edit_2.15.0.v20190528-0725.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -159,16 +144,15 @@
             <artifactId>service</artifactId>
             <version>1.8.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.emf.validation_1.8.0.201812070911.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.emf.validation_1.8.0.201812070911.jar</systemPath>
         </dependency>
-
 
         <dependency>
             <groupId>org.eclipse.ocl.ecore</groupId>
             <artifactId>ocl_ecore</artifactId>
             <version>3.14.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.ecore_3.14.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -176,7 +160,7 @@
             <artifactId>ocl_common</artifactId>
             <version>1.8.400</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.common_1.8.400.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.common_1.8.400.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -184,7 +168,7 @@
             <artifactId>ocl</artifactId>
             <version>3.10.400</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl_3.10.400.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl_3.10.400.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -192,7 +176,7 @@
             <artifactId>ocl_pivot</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.pivot_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.pivot_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -200,7 +184,7 @@
             <artifactId>ocl_xtext_completeocl</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.completeocl_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.completeocl_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -208,7 +192,7 @@
             <artifactId>xtext_essentialocl</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.essentialocl_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -216,7 +200,7 @@
             <artifactId>xtext_oclinecore</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.oclinecore_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.oclinecore_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
@@ -224,23 +208,19 @@
             <artifactId>xtext_oclstdlib</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.oclstdlib_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.oclstdlib_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.osgi</groupId>
-            <artifactId>osgi</artifactId>
-            <version>3.15.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.osgi_3.15.0.v20190830-1434.jar</systemPath>
+            <groupId>org.eclipse.platform</groupId>
+            <artifactId>org.eclipse.osgi</artifactId>
+            <version>3.15.100</version>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.urischeme</groupId>
-            <artifactId>urischeme</artifactId>
-            <version>1.0.400</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.urischeme_1.0.400.v20190621-1448.jar</systemPath>
+            <groupId>org.eclipse.platform</groupId>
+            <artifactId>org.eclipse.urischeme</artifactId>
+            <version>1.0.500</version>
         </dependency>
 
         <dependency>
@@ -248,15 +228,13 @@
             <artifactId>xpand</artifactId>
             <version>2.2.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.xpand_2.2.0.v201605260315.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.xpand_2.2.0.v201605260315.jar</systemPath>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.xtext</groupId>
-            <artifactId>xtext</artifactId>
-            <version>2.19.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.xtext_2.19.0.v20190902-0737.jar</systemPath>
+            <artifactId>org.eclipse.xtext</artifactId>
+            <version>2.20.0</version>
         </dependency>
 
         <dependency>
@@ -264,15 +242,13 @@
             <artifactId>xtext_base</artifactId>
             <version>1.9.0</version>
             <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar</systemPath>
+            <systemPath>${project.basedir}/plugins/org.eclipse.ocl.xtext.base_1.9.0.v20190910-0937.jar</systemPath>
         </dependency>
 
         <dependency>
-            <groupId>org.eclipse.xtext.util</groupId>
-            <artifactId>xtext_util</artifactId>
-            <version>1.9.0</version>
-            <scope>system</scope>
-            <systemPath>${env.VALIDATOR_LIBS}/org.eclipse.xtext.util_2.19.0.v20190902-0737.jar</systemPath>
+            <groupId>org.eclipse.xtext</groupId>
+            <artifactId>org.eclipse.xtext.util</artifactId>
+            <version>2.20.0</version>
         </dependency>
 
         <dependency>
@@ -293,8 +269,6 @@
             <version>2.6.0</version>
         </dependency>
 
-
     </dependencies>
-
 
 </project>
