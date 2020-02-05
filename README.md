@@ -59,7 +59,14 @@ be the following: each xml profile instance file has to be in a separate zip fil
 - *(optional)* copy in the directory `config` a CGMES boundary set (same format: each 
 instance as a separate zip). This boundary set will be substituted to the one defined
 in the IGM if this is not the same. This process is similar to what OPDE does.
-- **important**: required validation rules are specified in a separare configuration file, it has to be stored into `config/cgmes61970oclModel.ecore`. This configuration file can be obtained from ENTSOe CGM BP group: https://extra.entsoe.eu/CGM/Collaboration/CGMESRelatedDocumentsEMFCGMESTestModels/2019%20QoCDCv3.1%20Prototype%20validation%20results/cgmes61970oclModel.ecore
+- **important**: required validation rules are specified in a separare configuration files, it has to be stored into the `config` directory.
+These configuration files can be obtained from ENTSOe CGM BP group:
+
+https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/cgmes61970oclModel.ecore
+
+and
+
+https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/UMLRestrictionRules.xml
 
 ## Usage
 ###  Windows users

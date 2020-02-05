@@ -15,8 +15,7 @@
 
 package ocl;
 
-import ocl.util.EvaluationResult;
-import ocl.util.IOUtils;
+import ocl.util.*;
 import org.eclipse.emf.common.util.Diagnostic;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
@@ -42,8 +41,6 @@ import java.util.logging.Logger;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import ocl.util.XLSWriter;
 
 public class OCLEvaluator {
 
@@ -306,9 +303,9 @@ public class OCLEvaluator {
     }
 
 
-    private void writeExcelReport(Map<String, List<EvaluationResult>> synthesis, File path){
+    private void writeExcelReport(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
         XLSWriter writer = new XLSWriter();
-        writer.writeResults(synthesis, path);
+        writer.writeResults(synthesis, rules, path);
 
     }
 
@@ -366,7 +363,20 @@ public class OCLEvaluator {
 
         OCLEvaluator evaluator = new OCLEvaluator();
         Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where);
-        evaluator.writeExcelReport(synthesis, new File(args[0]+"/QASv3_results.xlsx"));
+
+        try {
+            // Read rule details
+            RuleDescriptionParser parser = new RuleDescriptionParser();
+            HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
+
+            // write report
+            evaluator.writeExcelReport(synthesis, rules, new File(args[0]+"/QASv3_results.xlsx"));
+
+
+        } catch (ParserConfigurationException | IOException | SAXException e){
+            e.printStackTrace();
+            System.exit(-1);
+        }
 
     }
 
