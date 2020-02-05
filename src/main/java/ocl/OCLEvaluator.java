@@ -268,34 +268,51 @@ public class OCLEvaluator {
                 while (matcher.find()) {
                     String name = (object.eClass().getEStructuralFeature("name") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("name"))) : null;
                     String ruleName = matcher.group(1);
-                    String severity = rules.get(ruleName)==null?"UNKOWN":rules.get(ruleName).getSeverity();
-                    int level = rules.get(ruleName)==null?0:rules.get(ruleName).getLevel();
-                    results.add(new EvaluationResult(severity,
-                            ruleName,
-                            level,
-                            object.eClass().getName(),
-                            (object.eClass().getEStructuralFeature("mRID")!=null)?String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                            name
-                    ));
+                    if (!excludeRuleName(ruleName)){
+                        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
+                        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
+                        results.add(new EvaluationResult(severity,
+                                ruleName,
+                                level,
+                                object.eClass().getName(),
+                                (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
+                                name
+                        ));
+                    }
                 }
             } else {
                 msg = childDiagnostic.getMessage();
                 matcher = pattern.matcher(msg);
                 while (matcher.find()) {
                     String ruleName = matcher.group(1);
-                    String severity = rules.get(ruleName)==null?"UNKOWN":rules.get(ruleName).getSeverity();
-                    int level = rules.get(ruleName)==null?0:rules.get(ruleName).getLevel();
-                    results.add(new EvaluationResult(severity,
-                            ruleName,
-                            level,
-                            object.eClass().getName(),
-                            (object.eClass().getEStructuralFeature("mRID")!=null)?String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                            null
-                    ));
+                    if (!excludeRuleName(ruleName)) {
+                        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
+                        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
+                        results.add(new EvaluationResult(severity,
+                                ruleName,
+                                level,
+                                object.eClass().getName(),
+                                (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
+                                null
+                        ));
+                    }
                 }
             }
         }
         return results;
+    }
+
+    /**
+     * Workaround to exclude wrongly reported rules (may happen if the Java code does not match exactly the ecore file)
+     * @param ruleName
+     * @return
+     */
+    private boolean excludeRuleName(String ruleName){
+        // MessageType introduced in ecore file but not managed on Java side
+        if ("MessageType".equalsIgnoreCase(ruleName)){
+            return true;
+        }
+        return false;
     }
 
 

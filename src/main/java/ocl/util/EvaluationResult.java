@@ -82,7 +82,7 @@ public class EvaluationResult{
     }
 
     public String toString(){
-        String s = String.format("%-30s %-5s: %-25s %-37s %-30s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"");
+        String s = String.format("%-40s %-5s: %-25s %-37s %-30s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"");
         return s;
     }
 
