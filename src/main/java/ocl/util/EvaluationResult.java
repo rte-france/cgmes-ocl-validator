@@ -16,14 +16,14 @@ package ocl.util;
 
 public class EvaluationResult{
 
-    private int severity;
+    private String severity;
     private String rule;
 
-    public int getSeverity() {
+    public String getSeverity() {
         return severity;
     }
 
-    public void setSeverity(int severity) {
+    public void setSeverity(String severity) {
         this.severity = severity;
     }
 
@@ -72,7 +72,7 @@ public class EvaluationResult{
     private String name;
     private Integer level;
 
-    public EvaluationResult(int severity, String rule, Integer level, String type, String id, String name) {
+    public EvaluationResult(String severity, String rule, Integer level, String type, String id, String name) {
         this.severity = severity;
         this.rule = rule;
         this.type = type;
@@ -82,7 +82,7 @@ public class EvaluationResult{
     }
 
     public String toString(){
-        String s = String.format("%-35s %-5s: %-25s %-37s %-30s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"");
+        String s = String.format("%-30s %-5s: %-25s %-37s %-30s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"");
         return s;
     }
 

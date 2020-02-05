@@ -137,7 +137,7 @@ public class OCLEvaluator {
      * @param where
      * @return
      */
-    public Map<String, List<EvaluationResult>> assessRules(File where){
+    public Map<String, List<EvaluationResult>> assessRules(File where, HashMap<String, RuleDescription> rules){
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
         IGM_CGM_preparation my_prep = new IGM_CGM_preparation();
@@ -179,7 +179,7 @@ public class OCLEvaluator {
             if (diagnostics==null) {
                 LOGGER.severe("Problem with input xmi for model: " + key);
             } else {
-                List<EvaluationResult> res = getErrors(diagnostics, ruleLevels);
+                List<EvaluationResult> res = getErrors(diagnostics, rules);
                 printError(res);
                 results.put(key, res);
 
@@ -252,8 +252,8 @@ public class OCLEvaluator {
      * @param diagnostics
      * @return
      */
-    public List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String,Integer> ruleLevels) {
-        //FIXME: severity level is incorrect  (always error); missing rule level
+    public List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
+
         List<EvaluationResult> results = new ArrayList<>();
         if (diagnostics==null) return results;
         for (Diagnostic childDiagnostic: diagnostics.getChildren()){
@@ -267,9 +267,12 @@ public class OCLEvaluator {
                 matcher = pattern.matcher(msg);
                 while (matcher.find()) {
                     String name = (object.eClass().getEStructuralFeature("name") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("name"))) : null;
-                    results.add(new EvaluationResult(childDiagnostic.getSeverity(),
-                            matcher.group(1),
-                            ruleLevels.get(matcher.group(1)),
+                    String ruleName = matcher.group(1);
+                    String severity = rules.get(ruleName)==null?"UNKOWN":rules.get(ruleName).getSeverity();
+                    int level = rules.get(ruleName)==null?0:rules.get(ruleName).getLevel();
+                    results.add(new EvaluationResult(severity,
+                            ruleName,
+                            level,
                             object.eClass().getName(),
                             (object.eClass().getEStructuralFeature("mRID")!=null)?String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
                             name
@@ -279,9 +282,12 @@ public class OCLEvaluator {
                 msg = childDiagnostic.getMessage();
                 matcher = pattern.matcher(msg);
                 while (matcher.find()) {
-                    results.add(new EvaluationResult(childDiagnostic.getSeverity(),
-                            matcher.group(1),
-                            ruleLevels.get(matcher.group(1)),
+                    String ruleName = matcher.group(1);
+                    String severity = rules.get(ruleName)==null?"UNKOWN":rules.get(ruleName).getSeverity();
+                    int level = rules.get(ruleName)==null?0:rules.get(ruleName).getLevel();
+                    results.add(new EvaluationResult(severity,
+                            ruleName,
+                            level,
                             object.eClass().getName(),
                             (object.eClass().getEStructuralFeature("mRID")!=null)?String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
                             null
@@ -295,10 +301,11 @@ public class OCLEvaluator {
 
     private void printError(List<EvaluationResult> res){
         for (EvaluationResult er: res) {
-            if (er.getSeverity() == Diagnostic.ERROR)
+            if (er.getSeverity().equalsIgnoreCase("ERROR"))
                 LOGGER.severe(er.toString());
-            else if (er.getSeverity() == Diagnostic.WARNING)
+            else if (er.getSeverity().equalsIgnoreCase("WARNING"))
                 LOGGER.warning(er.toString());
+            else LOGGER.info(er.toString());
         }
     }
 
@@ -350,7 +357,7 @@ public class OCLEvaluator {
      * @param args - path to CGMES files to be validated
      */
     public static void main(String[] args) {
-
+        Locale.setDefault(new Locale("en", "EN"));
         File where = null;
 
         if (args.length<1){
@@ -361,13 +368,13 @@ public class OCLEvaluator {
             where = new File(args[0]);
         }
 
-        OCLEvaluator evaluator = new OCLEvaluator();
-        Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where);
-
         try {
             // Read rule details
             RuleDescriptionParser parser = new RuleDescriptionParser();
             HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
+
+            OCLEvaluator evaluator = new OCLEvaluator();
+            Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where, rules);
 
             // write report
             evaluator.writeExcelReport(synthesis, rules, new File(args[0]+"/QASv3_results.xlsx"));
