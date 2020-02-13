@@ -27,9 +27,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.HashMap;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 public class XLSWriter {
@@ -119,6 +118,58 @@ public class XLSWriter {
             LOGGER.severe("Excel creation failed");
             e.printStackTrace();
         }
+    }
+
+    public void writeUnknownRulesReport(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
+        Set<String> unknownRulesSet = new HashSet<String>();
+        for (String k : synthesis.keySet()){
+            for (EvaluationResult res : synthesis.get(k)) {
+                String infringedRule = res.getRule();
+                if (rules.get(infringedRule)!=null) {
+                    String severity = rules.get(infringedRule).getSeverity();
+                    if (severity.equalsIgnoreCase("UNKNOWN"))
+                        unknownRulesSet.add(infringedRule);
+                }
+                else{
+                    unknownRulesSet.add(infringedRule);
+                }
+
+            }
+
+        }
+
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("UnknownRules");
+        int rowNum = 0;
+        Row row = sheet.createRow(rowNum++);
+        int colNum = 0;
+        Cell cell = row.createCell(colNum++);
+        cell.setCellValue("SEVERITY");
+        cell = row.createCell(colNum++);
+        cell.setCellValue("RULE");
+        for(String unknown : unknownRulesSet){
+            row = sheet.createRow(rowNum++);
+            colNum = 0;
+            cell = row.createCell(colNum++);
+            cell.setCellValue("UNKNOWN");
+            cell = row.createCell(colNum++);
+            cell.setCellValue(unknown);
+        }
+        sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum-1));
+        for (int i = 1; i < colNum; i++)
+            sheet.autoSizeColumn(i);
+        sheet.createFreezePane(0, 1);
+
+        try {
+            FileOutputStream outputStream = new FileOutputStream(path);
+            workbook.write(outputStream);
+            workbook.close();
+            LOGGER.info("Excel created: " + path);
+        } catch (Exception e) {
+            LOGGER.severe("Debug Excel creation failed");
+            e.printStackTrace();
+        }
+
     }
 
 }

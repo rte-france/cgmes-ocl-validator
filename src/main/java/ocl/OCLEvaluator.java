@@ -51,6 +51,7 @@ public class OCLEvaluator {
     private static URI modelURI;
     private static Resource model;
     private static EPackage p;
+    private static Boolean debugMode = false;
 
     // ----- Static initializations
     private static Logger LOGGER = null;
@@ -207,6 +208,7 @@ public class OCLEvaluator {
         properties.load(config);
         String basic_model = properties.getProperty("basic_model");
         String ecore_model = properties.getProperty("ecore_model");
+        String debug = properties.getProperty("debugMode");
 
         if (basic_model!=null && ecore_model!=null){
             configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
@@ -217,6 +219,11 @@ public class OCLEvaluator {
             System.exit(0);
         }
 
+        if(debug!=null){
+            if(debug.equalsIgnoreCase("TRUE")){
+                debugMode = true;
+            }
+        }
         return configs;
     }
 
@@ -333,6 +340,13 @@ public class OCLEvaluator {
 
     }
 
+    private void writeDebugReports(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
+        XLSWriter writer = new XLSWriter();
+        if(debugMode)
+            writer.writeUnknownRulesReport(synthesis,rules,path);
+
+    }
+
     /**
      * Not used anymore
      * @param diagnostics
@@ -391,10 +405,15 @@ public class OCLEvaluator {
             HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
 
             OCLEvaluator evaluator = new OCLEvaluator();
+            if(debugMode)
+                LOGGER.info("Validator running in debug mode");
             Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where, rules);
 
             // write report
             evaluator.writeExcelReport(synthesis, rules, new File(args[0]+"/QASv3_results.xlsx"));
+
+            //write debug report
+            evaluator.writeDebugReports(synthesis, rules, new File(args[0]+"/DebugReport.xlsx"));
 
 
         } catch (ParserConfigurationException | IOException | SAXException e){
