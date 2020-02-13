@@ -243,7 +243,14 @@ public class OCLEvaluator {
         mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
         File my_model = new File(basic_model);
         modelURI = URI.createFileURI(my_model.getAbsolutePath());
-        ecoreResource = resourceSet.getResource(mmURI, true);
+        try {
+            ecoreResource = resourceSet.getResource(mmURI, true);
+        }
+        catch (Exception e ){
+            LOGGER.severe("Ecore file missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
+            System.exit(0);
+        }
+
 
         List<EPackage> pList = getPackages(ecoreResource);
         p = pList.get(0);

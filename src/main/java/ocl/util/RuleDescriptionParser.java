@@ -14,12 +14,15 @@
  **/
 package ocl.util;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 
+import ocl.IGM_CGM_preparation;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
@@ -29,6 +32,12 @@ import org.xml.sax.SAXException;
 public class RuleDescriptionParser {
 
     private static String CGMBP = "http://entsoe.eu/CIM/Extensions/CGM-BP/2020#";
+    private static Logger LOGGER = null;
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+        LOGGER=Logger.getLogger(IGM_CGM_preparation.class.getName());
+    }
 
 
     public HashMap<String, RuleDescription> parseRules(String inputFile) throws ParserConfigurationException, IOException, SAXException {
@@ -37,6 +46,10 @@ public class RuleDescriptionParser {
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        if(!new File(inputFile).exists()){
+            LOGGER.severe("UMLRestrictionRules.xml missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
+            System.exit(0);
+        }
         Document doc = dBuilder.parse(inputFile);
         doc.getDocumentElement().normalize();
 
