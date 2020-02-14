@@ -16,16 +16,19 @@ package ocl.util;
 
 import ocl.OCLEvaluator;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.eclipse.emf.common.util.Diagnostic;
 
+import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 
 public class XLSWriter {
@@ -37,7 +40,15 @@ public class XLSWriter {
         LOGGER=Logger.getLogger(OCLEvaluator.class.getName());
     }
 
-    public void writeResults(Map<String, List<EvaluationResult>> synthesis, File path){
+    private XSSFCellStyle coloredCell(XSSFWorkbook wb, Color color){
+        XSSFCellStyle style1 = wb.createCellStyle();
+        style1.setFillForegroundColor(new XSSFColor(color));
+        style1.setFillPattern(CellStyle.SOLID_FOREGROUND);
+        return style1;
+    }
+
+
+    public void writeResults(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
         XSSFWorkbook workbook = new XSSFWorkbook();
         for (String k : synthesis.keySet()){
             XSSFSheet sheet = workbook.createSheet(k);
@@ -56,13 +67,23 @@ public class XLSWriter {
             cell.setCellValue("ID");
             cell = row.createCell(colNum++);
             cell.setCellValue("NAME");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("MESSAGE");
             for (EvaluationResult res : synthesis.get(k)){
+                String infringedRule = res.getRule();
                 row = sheet.createRow(rowNum++);
                 colNum = 0;
                 cell = row.createCell(colNum++);
-                cell.setCellValue(res.getSeverity()== Diagnostic.ERROR?"ERROR":"WARNING");
+                String severity = "UNKNOWN";
+                if (rules.get(infringedRule)!=null)
+                    severity = rules.get(infringedRule).getSeverity();
+                cell.setCellValue(severity);
+                if (severity.equalsIgnoreCase("ERROR"))
+                    cell.setCellStyle(coloredCell(workbook, Color.RED));
+                else if (severity.equalsIgnoreCase("WARNING"))
+                    cell.setCellStyle(coloredCell(workbook, Color.ORANGE));
                 cell = row.createCell(colNum++);
-                cell.setCellValue(res.getRule());
+                cell.setCellValue(infringedRule);
                 cell = row.createCell(colNum++);
                 if (res.getLevel()==null)
                     cell.setCellValue(0);
@@ -74,6 +95,13 @@ public class XLSWriter {
                 cell = row.createCell(colNum++);
                 String name = res.getName();
                 cell.setCellValue(name==null?"":name);
+                cell = row.createCell(colNum++);
+                String message = res.getName();
+                if (rules.get(infringedRule)==null)
+                    cell.setCellValue("");
+                else
+                    cell.setCellValue(rules.get(infringedRule).getMessage());
+
             }
             sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum-1));
             for (int i = 1; i < colNum; i++)
@@ -90,6 +118,58 @@ public class XLSWriter {
             LOGGER.severe("Excel creation failed");
             e.printStackTrace();
         }
+    }
+
+    public void writeUnknownRulesReport(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
+        Set<String> unknownRulesSet = new HashSet<String>();
+        for (String k : synthesis.keySet()){
+            for (EvaluationResult res : synthesis.get(k)) {
+                String infringedRule = res.getRule();
+                if (rules.get(infringedRule)!=null) {
+                    String severity = rules.get(infringedRule).getSeverity();
+                    if (severity.equalsIgnoreCase("UNKNOWN"))
+                        unknownRulesSet.add(infringedRule);
+                }
+                else{
+                    unknownRulesSet.add(infringedRule);
+                }
+
+            }
+
+        }
+
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("UnknownRules");
+        int rowNum = 0;
+        Row row = sheet.createRow(rowNum++);
+        int colNum = 0;
+        Cell cell = row.createCell(colNum++);
+        cell.setCellValue("SEVERITY");
+        cell = row.createCell(colNum++);
+        cell.setCellValue("RULE");
+        for(String unknown : unknownRulesSet){
+            row = sheet.createRow(rowNum++);
+            colNum = 0;
+            cell = row.createCell(colNum++);
+            cell.setCellValue("UNKNOWN");
+            cell = row.createCell(colNum++);
+            cell.setCellValue(unknown);
+        }
+        sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum-1));
+        for (int i = 1; i < colNum; i++)
+            sheet.autoSizeColumn(i);
+        sheet.createFreezePane(0, 1);
+
+        try {
+            FileOutputStream outputStream = new FileOutputStream(path);
+            workbook.write(outputStream);
+            workbook.close();
+            LOGGER.info("Excel created: " + path);
+        } catch (Exception e) {
+            LOGGER.severe("Debug Excel creation failed");
+            e.printStackTrace();
+        }
+
     }
 
 }
