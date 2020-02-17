@@ -50,6 +50,8 @@ public class XLSWriter {
 
     public void writeResults(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
         XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFCellStyle redStyle = coloredCell(workbook, Color.RED);
+        XSSFCellStyle orangeStyle = coloredCell(workbook, Color.ORANGE);
         for (String k : synthesis.keySet()){
             XSSFSheet sheet = workbook.createSheet(k);
             int rowNum = 0;
@@ -79,9 +81,9 @@ public class XLSWriter {
                     severity = rules.get(infringedRule).getSeverity();
                 cell.setCellValue(severity);
                 if (severity.equalsIgnoreCase("ERROR"))
-                    cell.setCellStyle(coloredCell(workbook, Color.RED));
+                    cell.setCellStyle(redStyle);
                 else if (severity.equalsIgnoreCase("WARNING"))
-                    cell.setCellStyle(coloredCell(workbook, Color.ORANGE));
+                    cell.setCellStyle(orangeStyle);
                 cell = row.createCell(colNum++);
                 cell.setCellValue(infringedRule);
                 cell = row.createCell(colNum++);
