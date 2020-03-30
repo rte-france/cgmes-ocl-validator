@@ -103,7 +103,8 @@ public class OCLEvaluator {
 
 
         List<String> files = new ArrayList<>();
-        cacheDir.mkdir();
+        cacheDir.mkdirs();
+
         LOGGER.info("Validator ready");
 
         files.addAll(write(xmi_list));
@@ -180,7 +181,8 @@ public class OCLEvaluator {
     }
 
     public synchronized void submit(HashMap<String,String> filesCPUS){
-        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors()-1);
+        int availableCPUs = (Runtime.getRuntime().availableProcessors()-1)<=0? 1 :  Runtime.getRuntime().availableProcessors()-1;
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(availableCPUs);
 
         for(String s: filesCPUS.keySet()){
             Runnable r = new Task(filesCPUS.get(s));
