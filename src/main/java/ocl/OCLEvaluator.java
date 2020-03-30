@@ -109,7 +109,7 @@ public class OCLEvaluator {
         files.addAll(write(xmi_list));
 
         xmi_list=null;
-        LOGGER.info("Printed");
+        
 
 
         int pseudoCPU = files.size()%batchSize!=0? files.size()/batchSize +1 : files.size()/batchSize;
