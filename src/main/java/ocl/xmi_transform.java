@@ -14,8 +14,6 @@
  **/
 package ocl;
 
-import ocl.util.IOUtils;
-
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.*;
 
@@ -30,10 +28,8 @@ import javax.xml.transform.*;
 
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -91,14 +87,70 @@ public class xmi_transform {
      * @throws SAXException
      * @throws ParserConfigurationException
      */
-    public HashMap<String, StreamResult> convertData(HashMap<Profile,List<Profile>>  IGM_CGM, List<String> defaultBDIds)
+    public HashMap<String, Document> convertData(HashMap<Profile,List<Profile>>  IGM_CGM, List<String> defaultBDIds)
             throws TransformerException, IOException, SAXException, ParserConfigurationException, URISyntaxException {
 
         setAuthExt();
         parseEcore();
-        HashMap<String,StreamResult> xmi_map = new HashMap<>();
+        HashMap<String,Document> xmi_map = new HashMap<>();
+
+
+        IGM_CGM.entrySet().parallelStream().forEach(entry->{
+            try{
+                Profile key = entry.getKey();
+
+                    Document resulting_xmi ;
+
+                    Profile EQBD = null;
+                    Profile TPBD = null;
+                    List<String> sv_sn = new ArrayList<>();
+
+
+                    Profile EQ = null;
+                    Profile SSH = null;
+                    Profile TP = null;
+
+                    sv_sn.add(getSimpleNameNoExt(key));
+
+                    for(Profile value : IGM_CGM.get(key)){
+                        switch (value.type){
+                            case EQ:
+                                EQ = value;
+                                break;
+                            case TP:
+                                TP = value;
+                                break;
+                            case SSH:
+                                SSH = value;
+                                break;
+                            case other:
+                                if(value.file.getName().contains("_EQBD_")){
+                                    EQBD=value;
+                                } else{
+                                    TPBD=value;
+                                }
+                                break;
+                        }
+                    }
+
+                    Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
+                    LOGGER.info("Merged and cleaned:"+key.xml_name);
+                    resulting_xmi = createXmi(merged_xml);
+                    LOGGER.info("Transformed:"+key.xml_name);
+
+                    xmi_map.put(sv_sn.get(0),resulting_xmi);
+
+
+
+                }catch (Exception e){
+                throw new RuntimeException(e);}
+        });
+
+
+       /* System.exit(0);
+        System.out.println(IGM_CGM.size());
         for(Profile key : IGM_CGM.keySet()){
-            StreamResult resulting_xmi ;
+            Document resulting_xmi ;
 
             Profile EQBD = null;
             Profile TPBD = null;
@@ -140,6 +192,7 @@ public class xmi_transform {
             xmi_map.put(sv_sn.get(0),resulting_xmi);
 
         }
+        System.exit(0);*/
         return xmi_map;
 
     }
@@ -212,7 +265,7 @@ public class xmi_transform {
      * @throws SAXException
      * @throws TransformerException
      */
-    private Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    private synchronized Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 
         HashMap<String,String> brlndType = new HashMap<>();
         brlndType.put("EQ","EqModel");
@@ -440,13 +493,12 @@ public class xmi_transform {
 
 
 
-
        return  target;
 
     }
 
 
-    private StreamResult createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
+    private  Document createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
         HashMap<String,String> sub = parseEcoreXmi();
@@ -551,11 +603,11 @@ public class xmi_transform {
         }
 
         
-        StreamResult result = convertToStream(xmi);
-        xmi = null;
+        //StreamResult result = convertToStream(xmi);
+        //xmi = null;
         lines = null;
 
-        return result;
+        return xmi;
     }
 
     private HashMap<String, String> parseEcoreXmi() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
