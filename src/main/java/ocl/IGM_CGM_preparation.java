@@ -51,29 +51,37 @@ public class IGM_CGM_preparation {
 
         FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
         File[] listOfFiles = models.listFiles(fileFilter);
-        for (File file: listOfFiles){
+        for (File file: listOfFiles) {
             ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
             Enumeration<? extends ZipEntry> entries = zip.entries();
-            while (entries.hasMoreElements()){
-                UserHandler handler = new UserHandler();
-                ZipEntry entry = entries.nextElement();
-                InputStream xmlStream = zip.getInputStream(entry);
-                saxParser.parse( xmlStream, handler );
-                Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
-                switch (profile.type){
-                    case SV:
-                        SVProfiles.add(profile);
-                        break;
-                    case EQ:
-                    case TP:
-                    case SSH:
-                        otherProfiles.add(profile);
-                        break;
-                    case other:
-                        BDProfiles.add(profile);
-                }
+            int numberEntry = 0;
+            while (entries.hasMoreElements()) {
+                numberEntry += 1;
+                entries.nextElement();
+            }
+            entries = zip.entries();
+            if (numberEntry == 1){
+                while (entries.hasMoreElements()) {
+                    UserHandler handler = new UserHandler();
+                    ZipEntry entry = entries.nextElement();
+                    InputStream xmlStream = zip.getInputStream(entry);
+                    saxParser.parse(xmlStream, handler);
+                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
+                    switch (profile.type) {
+                        case SV:
+                            SVProfiles.add(profile);
+                            break;
+                        case EQ:
+                        case TP:
+                        case SSH:
+                            otherProfiles.add(profile);
+                            break;
+                        case other:
+                            BDProfiles.add(profile);
+                    }
 
-                xmlStream.close();
+                    xmlStream.close();
+                }
             }
         }
 
