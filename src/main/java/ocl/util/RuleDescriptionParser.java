@@ -100,7 +100,5 @@ public class RuleDescriptionParser {
             e.printStackTrace();
         }
 
-
-
     }
 }

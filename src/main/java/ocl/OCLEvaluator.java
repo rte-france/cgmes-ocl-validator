@@ -76,7 +76,7 @@ public class OCLEvaluator {
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
         IGM_CGM_preparation my_prep = new IGM_CGM_preparation();
-        xmi_transform my_transf = new xmi_transform();
+        XMITransformation my_transf = new XMITransformation();
 
         HashMap<String, Document> xmi_list = new HashMap<>();
 
@@ -224,7 +224,7 @@ public class OCLEvaluator {
         command.add("java");
         command.add("-cp");
         command.add(classpath);
-        command.add(validation.class.getName());
+        command.add(Validation.class.getName());
         command.add(file);
         ProcessBuilder builder = new ProcessBuilder(command);
         try {

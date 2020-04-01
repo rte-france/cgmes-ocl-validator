@@ -22,7 +22,6 @@ import org.eclipse.ocl.xtext.completeocl.CompleteOCLStandaloneSetup;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.stream.StreamResult;
 import java.io.*;
 import java.lang.reflect.Type;
 import java.net.URISyntaxException;
@@ -36,7 +35,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
-public class validation {
+public class Validation {
     private static Resource ecoreResource;
     private static ResourceSet resourceSet;
 
@@ -61,7 +60,7 @@ public class validation {
         }
     }
 
-    public validation(){
+    public Validation(){
 
     }
 
@@ -225,7 +224,7 @@ public class validation {
 
 
 
-        validation validation = new validation();
+        Validation validation = new Validation();
         RuleDescriptionParser parser = new RuleDescriptionParser();
         HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
         parser = null;

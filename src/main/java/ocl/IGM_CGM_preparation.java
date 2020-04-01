@@ -86,7 +86,7 @@ public class IGM_CGM_preparation {
         }
 
         reorderModels();
-        checkConsitency();
+        checkConsistency();
 
     }
 
@@ -171,15 +171,17 @@ public class IGM_CGM_preparation {
      * @throws SAXException
      * @throws IOException
      */
-    public void checkConsitency() throws ParserConfigurationException, SAXException, IOException {
+    public void checkConsistency() throws ParserConfigurationException, SAXException, IOException {
         boolean BDParsed = false;
         List<Profile> defaultBDs = new ArrayList<>();
-        for (Profile key : IGM_CGM.keySet()){
+        Iterator<Map.Entry<Profile,List<Profile>>> it = IGM_CGM.entrySet().iterator();
+        while (it.hasNext()){
+            Map.Entry<Profile,List<Profile>> entry = it.next();
             int NumEqs = 0;
             int NumTPs = 0;
             int NumSSHs = 0;
             int NumBDs = 0;
-            for(Profile value : IGM_CGM.get(key)){
+            for (Profile value: entry.getValue()){
                 switch (value.type){
                     case EQ:
                         NumEqs++;
@@ -196,14 +198,14 @@ public class IGM_CGM_preparation {
                 }
             }
             if (!(NumEqs==NumTPs && NumTPs==NumSSHs)){
-                LOGGER.severe("The following model is missing one instance: " + key.xml_name);
-                IGM_CGM.remove(key);
+                LOGGER.severe("The following model is missing one instance: " + entry.getKey().xml_name);
+                it.remove();
             } else if(NumBDs<2 ){
                 if (BDParsed == false){
                     defaultBDs= getDefaultBds();
                     BDParsed = true;
                 }
-                IGM_CGM.get(key).addAll(defaultBDs);
+                entry.getValue().addAll(defaultBDs);
             }
         }
 

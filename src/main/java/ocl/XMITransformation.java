@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class xmi_transform {
+public class XMITransformation {
 
     private static Logger LOGGER = null;
 
