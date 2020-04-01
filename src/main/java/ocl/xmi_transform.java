@@ -96,9 +96,8 @@ public class xmi_transform {
 
 
         IGM_CGM.entrySet().parallelStream().forEach(entry->{
-            try{
-                Profile key = entry.getKey();
-
+            Profile key = entry.getKey();
+            try {
                     Document resulting_xmi ;
 
                     Profile EQBD = null;
@@ -132,7 +131,6 @@ public class xmi_transform {
                                 break;
                         }
                     }
-
                     Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
                     LOGGER.info("Merged and cleaned:"+key.xml_name);
                     resulting_xmi = createXmi(merged_xml);
@@ -141,9 +139,10 @@ public class xmi_transform {
                     xmi_map.put(sv_sn.get(0),resulting_xmi);
 
 
-
-                }catch (Exception e){
-                throw new RuntimeException(e);}
+            } catch (Exception e){
+                    LOGGER.severe("Error in processing: "+ key.xml_name);
+                    throw new RuntimeException(e);
+            }
         });
 
 
