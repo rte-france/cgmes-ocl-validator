@@ -15,10 +15,6 @@
 package ocl.util;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -53,7 +49,7 @@ public class IOUtils{
         Pattern p = Pattern.compile("\\$\\{(\\w+)\\}|\\$(\\w+)");
         Matcher m = p.matcher(input); // get a matcher object
         StringBuffer sb = new StringBuffer();
-        String output = new String();
+        String output = "";
         while(m.find()){
             String envVarName = null == m.group(1) ? m.group(2) : m.group(1);
             String envVarValue = System.getenv(envVarName).replace("\\", "\\\\");

@@ -37,9 +37,9 @@ public class IGM_CGM_preparation {
         LOGGER=Logger.getLogger(IGM_CGM_preparation.class.getName());
     }
 
-    List<Profile> SVProfiles = new ArrayList<>();
-    List<Profile> otherProfiles = new ArrayList<>();
-    List<Profile> BDProfiles = new ArrayList<>();
+    private List<Profile> SVProfiles = new ArrayList<>();
+    private List<Profile> otherProfiles = new ArrayList<>();
+    private List<Profile> BDProfiles = new ArrayList<>();
     HashMap<Profile,List<Profile>> IGM_CGM= new HashMap<>();
     List<String> defaultBDIds = new ArrayList<>();
 
@@ -51,39 +51,48 @@ public class IGM_CGM_preparation {
 
         FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
         File[] listOfFiles = models.listFiles(fileFilter);
-        for (File file: listOfFiles){
+        if (listOfFiles == null) return;
+        for (File file: listOfFiles) {
             ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
             Enumeration<? extends ZipEntry> entries = zip.entries();
-            while (entries.hasMoreElements()){
-                UserHandler handler = new UserHandler();
-                ZipEntry entry = entries.nextElement();
-                InputStream xmlStream = zip.getInputStream(entry);
-                saxParser.parse( xmlStream, handler );
-                Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
-                switch (profile.type){
-                    case SV:
-                        SVProfiles.add(profile);
-                        break;
-                    case EQ:
-                    case TP:
-                    case SSH:
-                        otherProfiles.add(profile);
-                        break;
-                    case other:
-                        BDProfiles.add(profile);
-                }
+            int numberEntry = 0;
+            while (entries.hasMoreElements()) {
+                numberEntry += 1;
+                entries.nextElement();
+            }
+            entries = zip.entries();
+            if (numberEntry == 1){
+                while (entries.hasMoreElements()) {
+                    UserHandler handler = new UserHandler();
+                    ZipEntry entry = entries.nextElement();
+                    InputStream xmlStream = zip.getInputStream(entry);
+                    saxParser.parse(xmlStream, handler);
+                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
+                    switch (profile.type) {
+                        case SV:
+                            SVProfiles.add(profile);
+                            break;
+                        case EQ:
+                        case TP:
+                        case SSH:
+                            otherProfiles.add(profile);
+                            break;
+                        case other:
+                            BDProfiles.add(profile);
+                    }
 
-                xmlStream.close();
+                    xmlStream.close();
+                }
             }
         }
 
         reorderModels();
-        checkConsitency();
+        checkConsistency();
 
     }
 
 
-    public void reorderModels(){
+    private void reorderModels(){
         for (Profile my_sv_it : SVProfiles){
             List<Profile> TPs= new ArrayList<>();
             List<Profile> SSHs= new ArrayList<>();
@@ -163,15 +172,17 @@ public class IGM_CGM_preparation {
      * @throws SAXException
      * @throws IOException
      */
-    public void checkConsitency() throws ParserConfigurationException, SAXException, IOException {
+    private void checkConsistency() throws ParserConfigurationException, SAXException, IOException {
         boolean BDParsed = false;
         List<Profile> defaultBDs = new ArrayList<>();
-        for (Profile key : IGM_CGM.keySet()){
+        Iterator<Map.Entry<Profile,List<Profile>>> it = IGM_CGM.entrySet().iterator();
+        while (it.hasNext()){
+            Map.Entry<Profile,List<Profile>> entry = it.next();
             int NumEqs = 0;
             int NumTPs = 0;
             int NumSSHs = 0;
             int NumBDs = 0;
-            for(Profile value : IGM_CGM.get(key)){
+            for (Profile value: entry.getValue()){
                 switch (value.type){
                     case EQ:
                         NumEqs++;
@@ -188,14 +199,14 @@ public class IGM_CGM_preparation {
                 }
             }
             if (!(NumEqs==NumTPs && NumTPs==NumSSHs)){
-                LOGGER.severe("The following model is missing one instance: " + key.xml_name);
-                IGM_CGM.remove(key);
-            } else if(NumBDs<2 ){
-                if (BDParsed == false){
+                LOGGER.severe("The following model is missing one instance: " + entry.getKey().xml_name);
+                it.remove();
+            } else if(NumBDs<2){
+                if (!BDParsed){
                     defaultBDs= getDefaultBds();
                     BDParsed = true;
                 }
-                IGM_CGM.get(key).addAll(defaultBDs);
+                entry.getValue().addAll(defaultBDs);
             }
         }
 
@@ -208,7 +219,7 @@ public class IGM_CGM_preparation {
      * @throws ParserConfigurationException
      * @throws SAXException
      */
-    public List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
+    private List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + File.separator + "config.properties");
         Properties properties = new Properties();
         properties.load(config);

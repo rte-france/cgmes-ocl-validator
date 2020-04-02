@@ -14,8 +14,6 @@
  **/
 package ocl;
 
-import ocl.util.IOUtils;
-
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.*;
 
@@ -30,10 +28,8 @@ import javax.xml.transform.*;
 
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,7 +40,7 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-public class xmi_transform {
+class XMITransformation {
 
     private static Logger LOGGER = null;
 
@@ -91,14 +87,69 @@ public class xmi_transform {
      * @throws SAXException
      * @throws ParserConfigurationException
      */
-    public HashMap<String, StreamResult> convertData(HashMap<Profile,List<Profile>>  IGM_CGM, List<String> defaultBDIds)
+     HashMap<String, Document> convertData(HashMap<Profile,List<Profile>>  IGM_CGM, List<String> defaultBDIds)
             throws TransformerException, IOException, SAXException, ParserConfigurationException, URISyntaxException {
 
         setAuthExt();
         parseEcore();
-        HashMap<String,StreamResult> xmi_map = new HashMap<>();
+        HashMap<String,Document> xmi_map = new HashMap<>();
+
+
+        IGM_CGM.entrySet().parallelStream().forEach(entry->{
+            Profile key = entry.getKey();
+            try {
+                    Document resulting_xmi ;
+
+                    Profile EQBD = null;
+                    Profile TPBD = null;
+                    List<String> sv_sn = new ArrayList<>();
+
+
+                    Profile EQ = null;
+                    Profile SSH = null;
+                    Profile TP = null;
+
+                    sv_sn.add(getSimpleNameNoExt(key));
+
+                    for(Profile value : IGM_CGM.get(key)){
+                        switch (value.type){
+                            case EQ:
+                                EQ = value;
+                                break;
+                            case TP:
+                                TP = value;
+                                break;
+                            case SSH:
+                                SSH = value;
+                                break;
+                            case other:
+                                if(value.file.getName().contains("_EQBD_")){
+                                    EQBD=value;
+                                } else{
+                                    TPBD=value;
+                                }
+                                break;
+                        }
+                    }
+                    Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
+                    LOGGER.info("Merged and cleaned:"+key.xml_name);
+                    resulting_xmi = createXmi(merged_xml);
+                    LOGGER.info("Transformed:"+key.xml_name);
+
+                    xmi_map.put(sv_sn.get(0),resulting_xmi);
+
+
+            } catch (Exception e){
+                    LOGGER.severe("Error in processing: "+ key.xml_name);
+                    throw new RuntimeException(e);
+            }
+        });
+
+
+       /* System.exit(0);
+        System.out.println(IGM_CGM.size());
         for(Profile key : IGM_CGM.keySet()){
-            StreamResult resulting_xmi ;
+            Document resulting_xmi ;
 
             Profile EQBD = null;
             Profile TPBD = null;
@@ -140,6 +191,7 @@ public class xmi_transform {
             xmi_map.put(sv_sn.get(0),resulting_xmi);
 
         }
+        System.exit(0);*/
         return xmi_map;
 
     }
@@ -212,7 +264,7 @@ public class xmi_transform {
      * @throws SAXException
      * @throws TransformerException
      */
-    private Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    private synchronized Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 
         HashMap<String,String> brlndType = new HashMap<>();
         brlndType.put("EQ","EqModel");
@@ -248,8 +300,8 @@ public class xmi_transform {
         for (Node eQnode : EQnodes) {
             if(!StringUtils.isEmpty(eQnode.getLocalName())){
                 if(!StringUtils.contains(eQnode.getLocalName(),"FullModel")){
-                    Node ext = target.createElement("brlnd:ModelObject." + brlndType.get(EQ.type.toString()));
-                    ((Element) ext).setAttribute("rdf:resource", EQ.id);
+                    Element ext = target.createElement("brlnd:ModelObject." + brlndType.get(EQ.type.toString()));
+                    ext.setAttribute("rdf:resource", EQ.id);
                     eQnode.appendChild(ext);
                 }
                 eq_.put(eQnode.getAttributes().item(0).getNodeValue(),eQnode);
@@ -314,8 +366,8 @@ public class xmi_transform {
                 String id = node.getAttributes().item(0).getNodeValue().replaceAll("#","");
                 if(eq_.containsKey(id) && !node.getLocalName().contains("FullModel")){
                     if(node.hasChildNodes()){
-                        Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
-                        ((Element) ext).setAttribute("rdf:resource", SSH.id);
+                        Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
+                        ext.setAttribute("rdf:resource", SSH.id);
 
                         for(int c=0; c<node.getChildNodes().getLength();c++){
                             if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName()) && !StringUtils.contains(node.getChildNodes().item(c).getLocalName(),"name")){
@@ -342,8 +394,8 @@ public class xmi_transform {
                     if(nodeListtp.item(i).hasChildNodes()){
                         for(int c=0; c<nodeListtp.item(i).getChildNodes().getLength();c++){
                             if(nodeListtp.item(i).getChildNodes().item(c).getLocalName()!=null && !StringUtils.contains(nodeListtp.item(i).getChildNodes().item(c).getLocalName(),"name")) {
-                                Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                                ((Element) ext).setAttribute("rdf:resource", TP.id);
+                                Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
+                                ext.setAttribute("rdf:resource", TP.id);
                                 Node node = eq_.get(id).getOwnerDocument().importNode(nodeListtp.item(i).getChildNodes().item(c),true);
                                 eq_.get(id).appendChild(node);
                                 eq_.get(id).appendChild(ext);
@@ -373,13 +425,13 @@ public class xmi_transform {
                 }
                 addNode(target,BDObjects.get(t).TPn);
                 addNode(target,BDObjects.get(t).EQn);
-                if(isNb == true || isusingCN == true)
+                if(isNb || isusingCN)
                     addNode(target,BDObjects.get(t).CNn);
 
             }
             else{
-                Node ext_ = TPs2add.get(t).getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                ((Element) ext_).setAttribute("rdf:resource", TP.id);
+                Element ext_ = TPs2add.get(t).getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
+                ext_.setAttribute("rdf:resource", TP.id);
                 TPs2add.get(t).appendChild(ext_);
                 addNode(target,TPs2add.get(t));
 
@@ -415,8 +467,8 @@ public class xmi_transform {
                         }
                         Node my_node = addNode(target, sVnode);
                         if(sVnode.getLocalName().contains("TopologicalIsland") || sVnode.getLocalName().contains("SvStatus")){
-                            Node ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
-                            ((Element) ext).setAttribute("rdf:resource", SV.id);
+                            Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
+                            ext.setAttribute("rdf:resource", SV.id);
                             my_node.appendChild(ext);
                         }
 
@@ -438,15 +490,12 @@ public class xmi_transform {
         voltageLevels_=null;
         transf_=null;
 
-
-
-
        return  target;
 
     }
 
 
-    private StreamResult createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
+    private  Document createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
         HashMap<String,String> sub = parseEcoreXmi();
@@ -467,9 +516,6 @@ public class xmi_transform {
         }
         Node[] lines = convertToArray(target.getDocumentElement().getChildNodes());
         Node[] basics = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("basic_model"))));
-
-
-
 
         xmi.appendChild(xmi.createElementNS("http://Model/1.0/CGMES", "CGMES:DataSet"));
         for(String s : authExt.keySet()){
@@ -503,9 +549,9 @@ public class xmi_transform {
 
         for (Node line : lines) {
             if(!StringUtils.isEmpty(line.getLocalName())){
-                Node datasetmember = xmi.createElement("DataSetMember");
-                ((Element) datasetmember).setAttribute("xsi:type",sub.get(line.getLocalName())+":"+line.getLocalName());
-                ((Element) datasetmember).setAttribute("mRID",line.getAttributes().item(0).getNodeValue());
+                Element datasetmember = xmi.createElement("DataSetMember");
+                datasetmember.setAttribute("xsi:type",sub.get(line.getLocalName())+":"+line.getLocalName());
+                datasetmember.setAttribute("mRID",line.getAttributes().item(0).getNodeValue());
 
                 Node[] childs = convertToArray(line.getChildNodes());
                 for (Node child : childs) {
@@ -517,7 +563,7 @@ public class xmi_transform {
                                 if(datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1])!=null){
                                     already = datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1]).getNodeValue()+" ";
                                 }
-                                ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], already+"//@DataSetMember."+String.valueOf(numbering.get(refId)));
+                                datasetmember.setAttribute(child.getNodeName().split("\\.")[1], already+"//@DataSetMember."+String.valueOf(numbering.get(refId)));
                             }
                             else{
                                 String literal = null;
@@ -534,14 +580,14 @@ public class xmi_transform {
                                     already = datasetmember.getAttributes().getNamedItem(child.getNodeName().split("\\.")[1]).getNodeValue()+" ";
                                 }
 
-                                ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1], already+literal);
+                                datasetmember.setAttribute(child.getNodeName().split("\\.")[1], already+literal);
 
                             }
 
                         }
                         else{
 
-                            ((Element) datasetmember).setAttribute(child.getNodeName().split("\\.")[1],child.getTextContent());
+                            datasetmember.setAttribute(child.getNodeName().split("\\.")[1],child.getTextContent());
                         }
                     }
                 }
@@ -550,12 +596,9 @@ public class xmi_transform {
             }
         }
 
-        
-        StreamResult result = convertToStream(xmi);
-        xmi = null;
         lines = null;
 
-        return result;
+        return xmi;
     }
 
     private HashMap<String, String> parseEcoreXmi() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
@@ -592,8 +635,6 @@ public class xmi_transform {
 
 
         xmiXmlns.put("schemaLocation", schema);
-
-
 
         return sub;
 
@@ -672,7 +713,7 @@ public class xmi_transform {
      * @param list
      * @return
      */
-    private  Node[] convertToArray(NodeList list)
+    private Node[] convertToArray(NodeList list)
     {
         int length = list.getLength();
         Node[] copy = new Node[length];
@@ -830,9 +871,9 @@ public class xmi_transform {
     private void addFullModelInfo(Document doc, String modelPart_, String business) throws IOException, TransformerException {
 
         NodeList fullmodel = doc.getElementsByTagName("md:FullModel");
-        String effectiveDate = new String();
-        String sourcingTSO_ = new String();
-        String fileVersion_ = new String();
+        String effectiveDate = "";
+        String sourcingTSO_ = "";
+        String fileVersion_ = "";
         for(int i=0; i<fullmodel.getLength();i++){
             if(fullmodel.item(i).getLocalName()!=null){
                 if(fullmodel.item(i).hasChildNodes()){
@@ -941,8 +982,6 @@ public class xmi_transform {
             }
         }
 
-
-
         NodeList BVlist = nodeListEqBd.item(0).getOwnerDocument().getElementsByTagName("cim:BaseVoltage");
         for(int i=0; i<BVlist.getLength();i++){
             if(BVlist.item(i).getLocalName()!=null){
@@ -950,7 +989,6 @@ public class xmi_transform {
                 BVmap.put(id,BVlist.item(i));
             }
         }
-
 
         NodeList BDLines = nodeListEqBd.item(0).getOwnerDocument().getElementsByTagName("cim:Line");
         for(int i=0; i<BDLines.getLength();i++){
@@ -1001,7 +1039,7 @@ public class xmi_transform {
      */
     private InputStream getCommander(){
        InputStream commander = this.getClass().getClassLoader().getResourceAsStream("cim16_analyse_igm.xml");
-        return  commander;
+       return  commander;
     }
 
 
@@ -1027,7 +1065,6 @@ public class xmi_transform {
         }
         return nodeList;
     }
-
 
 
 }

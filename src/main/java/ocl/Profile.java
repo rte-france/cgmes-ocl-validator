@@ -29,7 +29,7 @@ class Profile{
      * @param file_name
      * @return
      */
-    public static Type getType(String file_name) {
+    static Type getType(String file_name) {
         if (file_name.contains("_SV_")) return Type.valueOf("SV");
         else if (file_name.contains("_SSH_")) return Type.valueOf("SSH");
         else if (file_name.contains("_TP_")) return Type.valueOf("TP");

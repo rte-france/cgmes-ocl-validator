@@ -15,43 +15,41 @@
 
 package ocl;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import ocl.util.*;
-import org.eclipse.emf.common.util.Diagnostic;
-import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EPackage;
-import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
-import org.eclipse.emf.ecore.util.Diagnostician;
-import org.eclipse.emf.ecore.xmi.XMLResource;
-import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
-import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
-import org.eclipse.ocl.pivot.model.OCLstdlib;
-import org.eclipse.ocl.xtext.completeocl.CompleteOCLStandaloneSetup;
+import org.apache.commons.io.IOCase;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
+import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.*;
+import java.lang.reflect.Type;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class OCLEvaluator {
 
-    private static Resource ecoreResource;
-    private static ResourceSet resourceSet;
-
-    private static URI mmURI;
-    private static URI modelURI;
-    private static Resource model;
-    private static EPackage p;
     private static Boolean debugMode = false;
+    private static File where = null;
+    private static File cacheDir = null;
+    private static int batchSize = 2;
 
     // ----- Static initializations
     private static Logger LOGGER = null;
@@ -59,15 +57,7 @@ public class OCLEvaluator {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
         LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
-        try {
-            resourceSet = new ResourceSetImpl();
-            HashMap<String, String> configs = getConfig();
-            prepareValidator(configs.get("basic_model"), configs.get("ecore_model"));
-        } catch (IOException io){
-            io.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
+
     }
 
 
@@ -75,62 +65,7 @@ public class OCLEvaluator {
 
     }
 
-    /**
-     *
-     * @return Diagnostic object
-     */
-    public synchronized Diagnostic evaluate(StreamResult xmi){
-        InputStream inputStream = null;
-        try {
-            inputStream = new ByteArrayInputStream(xmi.getOutputStream().toString().getBytes("UTF-8"));
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
 
-        HashMap<String, Boolean> options = new HashMap<>();
-        options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
-        try {
-            model.load(inputStream,options);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-
-        EPackage ePackage = model.getContents().get(0).eClass().getEPackage();
-        EPackage.Registry.INSTANCE.put(p.getNsURI(), ePackage);
-
-        Resource.Factory.Registry.INSTANCE.getExtensionToFactoryMap().put(
-                Resource.Factory.Registry.DEFAULT_EXTENSION,
-                new XMIResourceFactoryImpl());
-
-        EObject rootObject = model.getContents().get(0);
-
-        Diagnostician take = new Diagnostician();
-
-        Diagnostic diagnostics;
-        diagnostics = take.validate(rootObject);
-
-        //printErrors(diagnostics);
-
-        model.unload();
-
-        return diagnostics;
-    }
-
-    /**
-     * Load ecore resources
-     * @param r
-     * @return
-     */
-    public static List<EPackage> getPackages(Resource r){
-        ArrayList<EPackage> pList = new ArrayList<EPackage>();
-        if (r.getContents() != null)
-            for (EObject obj : r.getContents())
-                if (obj instanceof EPackage) {
-                    pList.add((EPackage)obj);
-                }
-        return pList;
-    }
 
 
     /**
@@ -138,13 +73,13 @@ public class OCLEvaluator {
      * @param where
      * @return
      */
-    public Map<String, List<EvaluationResult>> assessRules(File where, HashMap<String, RuleDescription> rules){
+    private Map<String, List<EvaluationResult>> assessRules(File where) throws IOException {
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
         IGM_CGM_preparation my_prep = new IGM_CGM_preparation();
-        xmi_transform my_transf = new xmi_transform();
+        XMITransformation my_transf = new XMITransformation();
 
-        HashMap<String, StreamResult> xmi_list = new HashMap<>();
+        HashMap<String, Document> xmi_list = new HashMap<>();
 
         try {
             my_prep.readZip(where);
@@ -156,52 +91,227 @@ public class OCLEvaluator {
         try {
             xmi_list= my_transf.convertData(my_prep.IGM_CGM, my_prep.defaultBDIds);
             LOGGER.info("XMI transformation done!");
-        } catch (TransformerException | ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException | URISyntaxException | IOException e) {
+        } catch (TransformerException | ParserConfigurationException | SAXException | URISyntaxException | IOException e) {
             e.printStackTrace();
         }
         HashMap<String, Integer> ruleLevels = my_transf.getRuleLevels();
 
         my_prep = null; // save memory
         my_transf = null ; // save memory
+
+
+        List<String> files = new ArrayList<>();
+        cacheDir.mkdirs();
+
+        LOGGER.info("Validator ready");
+
+        files.addAll(write(xmi_list));
+
+        xmi_list=null;
         
 
-        OCLEvaluator evaluator = new OCLEvaluator();
-        Diagnostic diagnostics;
-        LOGGER.info("Validator ready");
-        for(String key : xmi_list.keySet()){
-            LOGGER.info("");
-            LOGGER.info("************");
-            LOGGER.info("Validating IGM "+key);
-            LOGGER.info("************");
 
-            diagnostics = evaluator.evaluate( xmi_list.get(key));
-            if (diagnostics==null) {
-                LOGGER.severe("Problem with input xmi for model: " + key);
-            } else {
-                List<EvaluationResult> res = getErrors(diagnostics, rules);
-                printError(res);
-                results.put(key, res);
+        int pseudoCPU = files.size()%batchSize!=0? files.size()/batchSize +1 : files.size()/batchSize;
 
-                if (!res.isEmpty())
-                    LOGGER.severe("ERROR: Invalid constraints for model: " + key);
-                else
-                    LOGGER.info("All constraints are valid for model:" + key);
+
+        List<List<String>> partition = partition(files,pseudoCPU);
+
+
+
+        partition.removeIf(item->item == null || item.size()==0);
+
+        HashMap<String,String> fileCPUs = new HashMap<>();
+        for(List<String> s:partition){
+            String json = new Gson().toJson(s);
+            UUID uuid = UUID.randomUUID();
+            FileWriter fileWriter = null;
+            try {
+                fileWriter = new FileWriter(cacheDir.getAbsolutePath()+File.separator+uuid.toString()+".json");
+                fileWriter.write(json);
+                fileWriter.flush();
+                fileWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            xmi_list.put(key,null); // to free memory
+            if(fileWriter!=null)
+                fileCPUs.put(uuid.toString(),cacheDir.getAbsolutePath()+File.separator+uuid.toString()+".json");
+
+        }
+
+
+        LOGGER.info("Start Validation");
+
+        submit(fileCPUs);
+
+        LOGGER.info("End Validation");
+
+
+        FileFilter fileFilter = new WildcardFileFilter("*.json.zip", IOCase.INSENSITIVE);
+        File jsonresult = new File(cacheDir.getAbsolutePath()+File.separator);
+        Type listType = new TypeToken<List<EvaluationResult>>() {}.getType();
+        File[] jsonres = jsonresult.listFiles(fileFilter);
+        for (File f: jsonres){
+
+            ZipFile zip = new ZipFile(new File(f.getAbsolutePath()));
+            Enumeration<? extends ZipEntry> entries = zip.entries();
+            while (entries.hasMoreElements()) {
+                ZipEntry entry = entries.nextElement();
+                InputStream jsonStream = zip.getInputStream(entry);
+                Gson gson = new Gson();
+                List<EvaluationResult> myList = gson.fromJson(org.apache.commons.io.IOUtils.toString(jsonStream, StandardCharsets.UTF_8.name()),listType);
+
+                results.put(f.getName().replace(".json.zip",""),myList);
+                jsonStream.close();
+                gson=null;
+
+            }
+            f.delete();
         }
 
         return results;
     }
 
 
+    private void cleanCache(){
+        if (cacheDir==null) return;
+        try {
+            FileUtils.deleteDirectory(cacheDir);
+            LOGGER.info("Cache cleaned");
+        } catch (IOException e){
+            LOGGER.severe("Cannot remove cache directory: " + cacheDir.getPath());
+            e.printStackTrace();
+        }
+    }
+
+
+
+    private synchronized void submit(HashMap<String,String> filesCPUS){
+        int availableCPUs = (Runtime.getRuntime().availableProcessors()-1)<=0? 1 :  Runtime.getRuntime().availableProcessors()-1;
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(availableCPUs);
+
+        for(String s: filesCPUS.keySet()){
+            Runnable r = new Task(filesCPUS.get(s));
+           pool.execute(r);
+        }
+
+        pool.shutdown();
+        while (true) {
+            try {
+                if (!!pool.awaitTermination(5, TimeUnit.NANOSECONDS)) break;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        };
+
+    }
+
+    private <T> List<List<T>> partition(Iterable<T> iterable, int partitions){
+        List<List<T>> result = new ArrayList<>(partitions);
+        for(int i = 0; i < partitions; i++)
+            result.add(new ArrayList<>());
+
+        Iterator<T> iterator = iterable.iterator();
+        for(int i = 0; iterator.hasNext(); i++)
+            result.get(i % partitions).add(iterator.next());
+
+        return result;
+    }
+
+
+    private void create(String file){
+        String javaHome = System.getProperty("java.home");
+
+        String javaBin = javaHome +
+                File.separator + "bin" +
+                File.separator + "java";
+        String classpath = System.getProperty("java.class.path");
+        List<String> command = new LinkedList<String>();
+        command.add("java");
+        command.add("-cp");
+        command.add(classpath);
+        command.add(Validation.class.getName());
+        command.add(file);
+        ProcessBuilder builder = new ProcessBuilder(command);
+        try {
+            Process process = builder.inheritIO().start();
+            process.waitFor();
+            process.destroy();
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void printDocument(Document doc, String name) throws  TransformerException {
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+        transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+        transformer.transform(new DOMSource(doc),new StreamResult(new File(cacheDir.getAbsolutePath()+File.separator+name)));
+    }
+
+
+    private static List<String> write(HashMap<String,Document> xmi_list){
+        List<String> files = new ArrayList<>();
+        xmi_list.entrySet().parallelStream().forEach(entry->{
+            try{
+                String key = entry.getKey();
+                write(xmi_list.get(key),entry.getKey()+".xmi");
+                files.add(cacheDir.getAbsolutePath()+File.separator+entry.getKey()+".xmi.zip");
+                xmi_list.put(key,null); // to free memory
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        return files;
+    }
+
+    private static void write( Document doc, String name) throws IOException {
+        OutputStream zipout = Files.newOutputStream(Paths.get(cacheDir.getAbsolutePath() + File.separator + name+".zip"));
+        try (ZipOutputStream zip = new ZipOutputStream(zipout)) {
+            ZipEntry entry = new ZipEntry(name); // The name
+            zip.putNextEntry(entry);
+            write(doc, zip);
+            zip.closeEntry();
+        }
+
+    }
+
+    private static void write(Document doc, OutputStream out) {
+        try {
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+            transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+            transformer.transform(
+                    new DOMSource(doc),
+                    new StreamResult(new OutputStreamWriter(out, "UTF-8"))
+            );
+
+        } catch (final IllegalArgumentException
+                | TransformerException
+                | TransformerFactoryConfigurationError
+                | UnsupportedEncodingException ex) {
+
+            throw new RuntimeException(ex);
+        }
+    }
+
     /**
      * Inizializes configurations
      * @return
      * @throws IOException
      */
-    public static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
+    static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+File.separator+"config.properties");
         Properties properties = new Properties();
@@ -209,6 +319,8 @@ public class OCLEvaluator {
         String basic_model = properties.getProperty("basic_model");
         String ecore_model = properties.getProperty("ecore_model");
         String debug = properties.getProperty("debugMode");
+        String cacheDir_= properties.getProperty("cacheDir");
+        String batchSize_=properties.getProperty("batchSize");
 
         if (basic_model!=null && ecore_model!=null){
             configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
@@ -224,126 +336,32 @@ public class OCLEvaluator {
                 debugMode = true;
             }
         }
+
+        if(cacheDir_!=null ){
+            try{
+                cacheDir = new File(IOUtils.resolveEnvVars(cacheDir_)+File.separator+"cache");
+            }catch (Exception e){
+
+                cacheDir= new File(where.getAbsolutePath()+File.separator+"/cache");
+            }
+
+        }
+        else{
+            cacheDir= new File(where.getAbsolutePath()+File.separator+"/cache");
+        }
+
+        if(batchSize_!=null){
+            batchSize = Integer.parseInt(batchSize_);
+        }
+
+
         return configs;
     }
 
-
-    /**
-     * Preparation of the validator
-     * @param basic_model
-     * @param ecore_model
-     */
-    public static void prepareValidator(String basic_model, String ecore_model){
-        CompleteOCLStandaloneSetup.doSetup();
-
-        OCLstdlib.install();
-
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
-        mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
-        File my_model = new File(basic_model);
-        modelURI = URI.createFileURI(my_model.getAbsolutePath());
-        try {
-            ecoreResource = resourceSet.getResource(mmURI, true);
-        }
-        catch (Exception e ){
-            LOGGER.severe("Ecore file missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
-            System.exit(0);
-        }
-
-
-        List<EPackage> pList = getPackages(ecoreResource);
-        p = pList.get(0);
-
-        resourceSet.getPackageRegistry().put(p.getNsURI(), p);
-
-        model = resourceSet.getResource(modelURI, true);
-        model.unload();
-    }
-
-    /**
-     *
-     * @param diagnostics
-     * @return
-     */
-    public List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
-
-        List<EvaluationResult> results = new ArrayList<>();
-        if (diagnostics==null) return results;
-        for (Diagnostic childDiagnostic: diagnostics.getChildren()){
-            List<?> data = childDiagnostic.getData();
-            EObject object = (EObject) data.get(0);
-            String msg;
-            Matcher matcher;
-            Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
-            if(data.size()==1){
-                msg = childDiagnostic.getMessage();
-                matcher = pattern.matcher(msg);
-                while (matcher.find()) {
-                    String name = (object.eClass().getEStructuralFeature("name") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("name"))) : null;
-                    String ruleName = matcher.group(1);
-                    if (!excludeRuleName(ruleName)){
-                        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
-                        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-                        results.add(new EvaluationResult(severity,
-                                ruleName,
-                                level,
-                                object.eClass().getName(),
-                                (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                                name
-                        ));
-                    }
-                }
-            } else {
-                msg = childDiagnostic.getMessage();
-                matcher = pattern.matcher(msg);
-                while (matcher.find()) {
-                    String ruleName = matcher.group(1);
-                    if (!excludeRuleName(ruleName)) {
-                        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
-                        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-                        results.add(new EvaluationResult(severity,
-                                ruleName,
-                                level,
-                                object.eClass().getName(),
-                                (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                                null
-                        ));
-                    }
-                }
-            }
-        }
-        return results;
-    }
-
-    /**
-     * Workaround to exclude wrongly reported rules (may happen if the Java code does not match exactly the ecore file)
-     * @param ruleName
-     * @return
-     */
-    private boolean excludeRuleName(String ruleName){
-        // MessageType introduced in ecore file but not managed on Java side
-        if ("MessageType".equalsIgnoreCase(ruleName)){
-            return true;
-        }
-        return false;
-    }
-
-
-    private void printError(List<EvaluationResult> res){
-        for (EvaluationResult er: res) {
-            if (er.getSeverity().equalsIgnoreCase("ERROR"))
-                LOGGER.severe(er.toString());
-            else if (er.getSeverity().equalsIgnoreCase("WARNING"))
-                LOGGER.warning(er.toString());
-            else LOGGER.info(er.toString());
-        }
-    }
-
-
     private void writeExcelReport(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
         XLSWriter writer = new XLSWriter();
-        writer.writeResults(synthesis, rules, path);
+        //writer.writeResults(synthesis, rules, path);
+        writer.writeResultsPerIGM(synthesis,rules,path);
 
     }
 
@@ -354,41 +372,20 @@ public class OCLEvaluator {
 
     }
 
-    /**
-     * Not used anymore
-     * @param diagnostics
-     */
-    /*
-    public static void printErrors(Diagnostic diagnostics){
+    class Task implements Runnable
+    {
+        private String name;
 
-        if (diagnostics.getSeverity()==Diagnostic.ERROR)
+        private Task(String s)
         {
-            for (Diagnostic childDiagnostic: diagnostics.getChildren()){
-                List<?> data = childDiagnostic.getData();
-                EObject object = (EObject) data.get(0);
-                String msg;
-                Matcher matcher;
-                Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
-                if(data.size()==1){
-                    msg = childDiagnostic.getMessage();
-                    matcher = pattern.matcher(msg);
-                    while (matcher.find()) {
-                        if (object.eClass().getEStructuralFeature("name")!=null){
-                            LOGGER.severe("Rule "+matcher.group(1)+" is violated on "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID"))+" ("+object.eGet(object.eClass().getEStructuralFeature("name"))+")");
-                        } else{
-                            LOGGER.severe("Rule "+matcher.group(1)+" is violated on "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID")));
-                        }
-                    }
-                } else {
-                    msg = childDiagnostic.getMessage();
-                    matcher = pattern.matcher(msg);
-                    while (matcher.find()) {
-                        LOGGER.severe("The required attribute "+matcher.group(1)+" must be set on  "+ object.eClass().getName() +" "+object.eGet(object.eClass().getEStructuralFeature("mRID")));
-                    }
-                }
-            }
+            name = s;
         }
-    }*/
+
+        public void run()
+        {
+           create(name);
+        }
+    }
 
     /**
      * Main
@@ -396,7 +393,7 @@ public class OCLEvaluator {
      */
     public static void main(String[] args) {
         Locale.setDefault(new Locale("en", "EN"));
-        File where = null;
+
 
         if (args.length<1){
             LOGGER.severe("You need to specify the folder containing the CGMES IGMs (one zip per instance)");
@@ -414,7 +411,7 @@ public class OCLEvaluator {
             OCLEvaluator evaluator = new OCLEvaluator();
             if(debugMode)
                 LOGGER.info("Validator running in debug mode");
-            Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where, rules);
+            Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where);
 
             // write report
             evaluator.writeExcelReport(synthesis, rules, new File(args[0]+"/QASv3_results.xlsx"));
@@ -422,6 +419,7 @@ public class OCLEvaluator {
             //write debug report
             evaluator.writeDebugReports(synthesis, rules, new File(args[0]+"/DebugReport.xlsx"));
 
+            evaluator.cleanCache();
 
         } catch (ParserConfigurationException | IOException | SAXException e){
             e.printStackTrace();
