@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import ocl.util.*;
 import org.apache.commons.io.IOCase;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
@@ -72,7 +73,7 @@ public class OCLEvaluator {
      * @param where
      * @return
      */
-    public Map<String, List<EvaluationResult>> assessRules(File where) throws IOException {
+    private Map<String, List<EvaluationResult>> assessRules(File where) throws IOException {
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
         IGM_CGM_preparation my_prep = new IGM_CGM_preparation();
@@ -90,16 +91,13 @@ public class OCLEvaluator {
         try {
             xmi_list= my_transf.convertData(my_prep.IGM_CGM, my_prep.defaultBDIds);
             LOGGER.info("XMI transformation done!");
-        } catch (TransformerException | ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException | URISyntaxException | IOException e) {
+        } catch (TransformerException | ParserConfigurationException | SAXException | URISyntaxException | IOException e) {
             e.printStackTrace();
         }
         HashMap<String, Integer> ruleLevels = my_transf.getRuleLevels();
 
         my_prep = null; // save memory
         my_transf = null ; // save memory
-
 
 
         List<String> files = new ArrayList<>();
@@ -126,8 +124,7 @@ public class OCLEvaluator {
         for(List<String> s:partition){
             String json = new Gson().toJson(s);
             UUID uuid = UUID.randomUUID();
-             uuid.toString();
-             FileWriter fileWriter = null;
+            FileWriter fileWriter = null;
             try {
                 fileWriter = new FileWriter(cacheDir.getAbsolutePath()+File.separator+uuid.toString()+".json");
                 fileWriter.write(json);
@@ -142,13 +139,11 @@ public class OCLEvaluator {
         }
 
 
-
         LOGGER.info("Start Validation");
 
         submit(fileCPUs);
 
         LOGGER.info("End Validation");
-
 
 
         FileFilter fileFilter = new WildcardFileFilter("*.json.zip", IOCase.INSENSITIVE);
@@ -171,16 +166,26 @@ public class OCLEvaluator {
 
             }
             f.delete();
-
-
         }
-
-
 
         return results;
     }
 
-    public synchronized void submit(HashMap<String,String> filesCPUS){
+
+    private void cleanCache(){
+        if (cacheDir==null) return;
+        try {
+            FileUtils.deleteDirectory(cacheDir);
+            LOGGER.info("Cache cleaned");
+        } catch (IOException e){
+            LOGGER.severe("Cannot remove cache directory: " + cacheDir.getPath());
+            e.printStackTrace();
+        }
+    }
+
+
+
+    private synchronized void submit(HashMap<String,String> filesCPUS){
         int availableCPUs = (Runtime.getRuntime().availableProcessors()-1)<=0? 1 :  Runtime.getRuntime().availableProcessors()-1;
         ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(availableCPUs);
 
@@ -200,7 +205,7 @@ public class OCLEvaluator {
 
     }
 
-    public <T> List<List<T>> partition(Iterable<T> iterable, int partitions){
+    private <T> List<List<T>> partition(Iterable<T> iterable, int partitions){
         List<List<T>> result = new ArrayList<>(partitions);
         for(int i = 0; i < partitions; i++)
             result.add(new ArrayList<>());
@@ -213,7 +218,7 @@ public class OCLEvaluator {
     }
 
 
-    public void create(String file){
+    private void create(String file){
         String javaHome = System.getProperty("java.home");
 
         String javaBin = javaHome +
@@ -235,11 +240,6 @@ public class OCLEvaluator {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-
-
-
-
-
     }
 
     private static void printDocument(Document doc, String name) throws  TransformerException {
@@ -251,12 +251,11 @@ public class OCLEvaluator {
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
 
-
         transformer.transform(new DOMSource(doc),new StreamResult(new File(cacheDir.getAbsolutePath()+File.separator+name)));
     }
 
 
-    public static List<String> write(HashMap<String,Document> xmi_list){
+    private static List<String> write(HashMap<String,Document> xmi_list){
         List<String> files = new ArrayList<>();
         xmi_list.entrySet().parallelStream().forEach(entry->{
             try{
@@ -272,23 +271,18 @@ public class OCLEvaluator {
         return files;
     }
 
-    public static void write( Document doc, String name)
-
-            throws IOException {
-            OutputStream zipout = Files.newOutputStream(Paths.get(cacheDir.getAbsolutePath() + File.separator + name+".zip"));
+    private static void write( Document doc, String name) throws IOException {
+        OutputStream zipout = Files.newOutputStream(Paths.get(cacheDir.getAbsolutePath() + File.separator + name+".zip"));
         try (ZipOutputStream zip = new ZipOutputStream(zipout)) {
-
-
             ZipEntry entry = new ZipEntry(name); // The name
             zip.putNextEntry(entry);
             write(doc, zip);
             zip.closeEntry();
-
         }
 
     }
 
-    public static void write(Document doc, OutputStream out) {
+    private static void write(Document doc, OutputStream out) {
         try {
             TransformerFactory tf = TransformerFactory.newInstance();
             Transformer transformer = tf.newTransformer();
@@ -317,7 +311,7 @@ public class OCLEvaluator {
      * @return
      * @throws IOException
      */
-    public static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
+    static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+File.separator+"config.properties");
         Properties properties = new Properties();
@@ -382,7 +376,7 @@ public class OCLEvaluator {
     {
         private String name;
 
-        public Task(String s)
+        private Task(String s)
         {
             name = s;
         }
@@ -424,6 +418,8 @@ public class OCLEvaluator {
 
             //write debug report
             evaluator.writeDebugReports(synthesis, rules, new File(args[0]+"/DebugReport.xlsx"));
+
+            evaluator.cleanCache();
 
         } catch (ParserConfigurationException | IOException | SAXException e){
             e.printStackTrace();

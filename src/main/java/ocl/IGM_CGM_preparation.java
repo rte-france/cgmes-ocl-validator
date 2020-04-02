@@ -37,9 +37,9 @@ public class IGM_CGM_preparation {
         LOGGER=Logger.getLogger(IGM_CGM_preparation.class.getName());
     }
 
-    List<Profile> SVProfiles = new ArrayList<>();
-    List<Profile> otherProfiles = new ArrayList<>();
-    List<Profile> BDProfiles = new ArrayList<>();
+    private List<Profile> SVProfiles = new ArrayList<>();
+    private List<Profile> otherProfiles = new ArrayList<>();
+    private List<Profile> BDProfiles = new ArrayList<>();
     HashMap<Profile,List<Profile>> IGM_CGM= new HashMap<>();
     List<String> defaultBDIds = new ArrayList<>();
 
@@ -51,6 +51,7 @@ public class IGM_CGM_preparation {
 
         FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
         File[] listOfFiles = models.listFiles(fileFilter);
+        if (listOfFiles == null) return;
         for (File file: listOfFiles) {
             ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
             Enumeration<? extends ZipEntry> entries = zip.entries();
@@ -91,7 +92,7 @@ public class IGM_CGM_preparation {
     }
 
 
-    public void reorderModels(){
+    private void reorderModels(){
         for (Profile my_sv_it : SVProfiles){
             List<Profile> TPs= new ArrayList<>();
             List<Profile> SSHs= new ArrayList<>();
@@ -171,7 +172,7 @@ public class IGM_CGM_preparation {
      * @throws SAXException
      * @throws IOException
      */
-    public void checkConsistency() throws ParserConfigurationException, SAXException, IOException {
+    private void checkConsistency() throws ParserConfigurationException, SAXException, IOException {
         boolean BDParsed = false;
         List<Profile> defaultBDs = new ArrayList<>();
         Iterator<Map.Entry<Profile,List<Profile>>> it = IGM_CGM.entrySet().iterator();
@@ -200,8 +201,8 @@ public class IGM_CGM_preparation {
             if (!(NumEqs==NumTPs && NumTPs==NumSSHs)){
                 LOGGER.severe("The following model is missing one instance: " + entry.getKey().xml_name);
                 it.remove();
-            } else if(NumBDs<2 ){
-                if (BDParsed == false){
+            } else if(NumBDs<2){
+                if (!BDParsed){
                     defaultBDs= getDefaultBds();
                     BDParsed = true;
                 }
@@ -218,7 +219,7 @@ public class IGM_CGM_preparation {
      * @throws ParserConfigurationException
      * @throws SAXException
      */
-    public List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
+    private List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + File.separator + "config.properties");
         Properties properties = new Properties();
         properties.load(config);

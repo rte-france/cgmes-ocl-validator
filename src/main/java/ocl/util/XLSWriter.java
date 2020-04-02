@@ -129,9 +129,6 @@ public class XLSWriter {
             }
         });
 
-
-
-
         LOGGER.info("All excel reports created");
     }
 

@@ -49,7 +49,7 @@ public class IOUtils{
         Pattern p = Pattern.compile("\\$\\{(\\w+)\\}|\\$(\\w+)");
         Matcher m = p.matcher(input); // get a matcher object
         StringBuffer sb = new StringBuffer();
-        String output = new String();
+        String output = "";
         while(m.find()){
             String envVarName = null == m.group(1) ? m.group(2) : m.group(1);
             String envVarValue = System.getenv(envVarName).replace("\\", "\\\\");

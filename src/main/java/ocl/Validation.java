@@ -53,10 +53,8 @@ public class Validation {
             resourceSet = new ResourceSetImpl();
             HashMap<String, String> configs = getConfig();
             prepareValidator(configs.get("basic_model"), configs.get("ecore_model"));
-        } catch (IOException io){
+        } catch (IOException | URISyntaxException io){
             io.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
         }
     }
 
@@ -65,7 +63,7 @@ public class Validation {
     }
 
 
-    public  static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
+    private  static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+ File.separator+"config.properties");
         Properties properties = new Properties();
@@ -86,7 +84,8 @@ public class Validation {
 
         return configs;
     }
-    public static void prepareValidator(String basic_model, String ecore_model){
+
+    private static void prepareValidator(String basic_model, String ecore_model){
         CompleteOCLStandaloneSetup.doSetup();
 
         OCLstdlib.install();
@@ -115,7 +114,7 @@ public class Validation {
     }
 
 
-    public static List<EPackage> getPackages(Resource r){
+    private static List<EPackage> getPackages(Resource r){
         ArrayList<EPackage> pList = new ArrayList<EPackage>();
         if (r.getContents() != null)
             for (EObject obj : r.getContents())
@@ -125,9 +124,8 @@ public class Validation {
         return pList;
     }
 
-    public  Diagnostic evaluate(InputStream inputStream, String name){
 
-
+    private Diagnostic evaluate(InputStream inputStream, String name){
         HashMap<String, Boolean> options = new HashMap<>();
         options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
         try {
@@ -136,7 +134,6 @@ public class Validation {
             e.printStackTrace();
             return null;
         }
-
 
         EObject rootObject = model.getContents().get(0);
 
@@ -158,12 +155,11 @@ public class Validation {
 
     private boolean excludeRuleName(String ruleName){
         // MessageType introduced in ecore file but not managed on Java side
-        if ("MessageType".equalsIgnoreCase(ruleName)){
-            return true;
-        }
-        return false;
+        return "MessageType".equalsIgnoreCase(ruleName);
     }
-    public List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
+
+
+    private List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
 
         List<EvaluationResult> results = new ArrayList<>();
         if (diagnostics==null) return results;
@@ -221,8 +217,6 @@ public class Validation {
         Type listType = new TypeToken<List<String>>() {}.getType();
         BufferedReader br = new BufferedReader(new FileReader(args[0]));
         List<String> myList = gson.fromJson(br,listType);
-
-
 
         Validation validation = new Validation();
         RuleDescriptionParser parser = new RuleDescriptionParser();
