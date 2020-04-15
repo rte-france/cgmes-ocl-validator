@@ -318,6 +318,7 @@ public class OCLEvaluator {
         properties.load(config);
         String basic_model = properties.getProperty("basic_model");
         String ecore_model = properties.getProperty("ecore_model");
+        String bdExtensions = properties.getProperty("bdExtensions");
         String debug = properties.getProperty("debugMode");
         String cacheDir_= properties.getProperty("cacheDir");
         String batchSize_=properties.getProperty("batchSize");
@@ -328,6 +329,14 @@ public class OCLEvaluator {
         }
         else{
             LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
+            System.exit(0);
+        }
+
+        if(bdExtensions!=null){
+            configs.put("bdExtensions",IOUtils.resolveEnvVars(bdExtensions));
+        }
+        else{
+            LOGGER.severe("Boundary extensions file missing from properties file");
             System.exit(0);
         }
 

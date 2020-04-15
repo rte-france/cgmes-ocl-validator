@@ -61,6 +61,10 @@ class XMITransformation {
         Node BVn;
     }
 
+    private class BDExtensions{
+        HashMap<String,Node> CimProfiles = new HashMap<>();
+    }
+
     private Set<String> classes = new HashSet<>();
     private HashMap<String, Integer> ruleLevels= new HashMap<>();
     private HashMap<String,BDObject> BDObjects = new HashMap<>();
@@ -71,6 +75,8 @@ class XMITransformation {
 
     private boolean isNb = false;
     private boolean isShortCircuit = false;
+    private BDExtensions bdExtensions = new BDExtensions();
+    private HashMap<String,String> brlndType = new HashMap<>();
 
     HashMap<String, Integer> getRuleLevels(){
         return ruleLevels;
@@ -93,6 +99,11 @@ class XMITransformation {
         setAuthExt();
         parseEcore();
         HashMap<String,Document> xmi_map = new HashMap<>();
+        parseBdExtensions();
+        brlndType.put("EQ","EqModel");
+        brlndType.put("TP","TpModel");
+        brlndType.put("SSH","SshModel");
+        brlndType.put("SV","SvModel");
 
 
         IGM_CGM.entrySet().parallelStream().forEach(entry->{
@@ -221,11 +232,7 @@ class XMITransformation {
      */
     private synchronized Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 
-        HashMap<String,String> brlndType = new HashMap<>();
-        brlndType.put("EQ","EqModel");
-        brlndType.put("TP","TpModel");
-        brlndType.put("SSH","SshModel");
-        brlndType.put("SV","SvModel");
+
 
 
         NodeList nodeListeq = correctDeps(getNodeList(EQ), EQ.DepToBeReplaced,defaultBDIds.get(0));
@@ -238,6 +245,7 @@ class XMITransformation {
         isNb = isNb(nodeListeq);
         Document target = nodeListeq.item(0).getOwnerDocument();
         target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
+        target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
 
         addFullModelInfo(target,"EQ",business);
         addFullModelInfo(nodeListtp.item(0).getOwnerDocument(),"TP",business);
@@ -448,6 +456,9 @@ class XMITransformation {
         }
 
 
+        addBdExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target);
+
+
         cleanXml(target);
         nodeListeq = null;
         nodeListtp = null;
@@ -459,11 +470,54 @@ class XMITransformation {
         SSHnodes = null;
         voltageLevels_=null;
         transf_=null;
-
+        System.out.println("Printing");
         printDocument(target, "Test_merge.xml");
         System.exit(0);
        return  target;
 
+    }
+
+
+    private void addBdExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
+        Set<String> cimprofilesuris = new HashSet<>();
+        cimprofilesuris.addAll(EQ.modelProfile);
+        cimprofilesuris.addAll(TP.modelProfile);
+        cimprofilesuris.addAll(SSH.modelProfile);
+        cimprofilesuris.addAll(SV.modelProfile);
+        cimprofilesuris.addAll(EQBD.modelProfile);
+        cimprofilesuris.addAll(TPBD.modelProfile);
+        for (String s : cimprofilesuris) {
+            if(bdExtensions.CimProfiles.containsKey(s)){
+                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                extEq.setAttribute("rdf:resource", EQBD.id);
+                addNode(target, bdExtensions.CimProfiles.get(s)).appendChild(extEq);
+            }
+            else if (StringUtils.contains(s,"/EquipmentBoundary/")){
+                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                extEq.setAttribute("rdf:resource", EQBD.id);
+                addNode(target, bdExtensions.CimProfiles.get("http://iec.ch/TC57/2013/61970-452/EquipmentBoundary/3")).appendChild(extEq);
+            }
+        }
+
+    }
+
+
+    private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
+        Node[] bdExts = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("bdExtensions"))));
+
+        for (Node bdExt : bdExts) {
+            if(!StringUtils.isEmpty(bdExt.getLocalName())){
+                if(StringUtils.contains(bdExt.getLocalName(),"CimProfile")){
+                    if(bdExt.hasChildNodes()){
+                        for (Node node : convertToArray(bdExt.getChildNodes())) {
+                            if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"CimProfile.uri")){
+                                bdExtensions.CimProfiles.put(node.getTextContent(),bdExt);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
 
@@ -622,6 +676,7 @@ class XMITransformation {
         authExt.put("md","http://iec.ch/TC57/61970-552/ModelDescription/1#");
         authExt.put("xmlns","http://www.w3.org/2000/xmlns/");
         authExt.put("brlnd","http://brolunda.com/ecore-converter#");
+        authExt.put("cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
     }
 
     /**
@@ -678,6 +733,7 @@ class XMITransformation {
 
 
         root.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
+        root.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
     }
 
     /**

@@ -67,7 +67,7 @@ public class IGM_CGM_preparation {
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
                     saxParser.parse(xmlStream, handler);
-                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
+                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(), handler.modelProfile);
                     switch (profile.type) {
                         case SV:
                             SVProfiles.add(profile);
@@ -240,7 +240,7 @@ public class IGM_CGM_preparation {
                     InputStream xmlStream = zip.getInputStream(entry);
                     saxParser.parse( xmlStream, handler );
                     if(Profile.getType(entry.getName()) == Profile.Type.other){
-                        Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
+                        Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(),handler.modelProfile);
                         defaultBDs.add(profile);
                         if(handler.my_depOn.size()!=0){
                             defaultBDIds.add(handler.my_depOn.get(0));
@@ -272,6 +272,8 @@ public class IGM_CGM_preparation {
     {
         String my_id;
         List<String> my_depOn = new ArrayList<String>();
+        List<String> modelProfile = new ArrayList<>();
+        boolean ismodelProfile = false;
 
         @Override
         public void startElement(String namespaceURI, String localName, String qname, Attributes atts){
@@ -280,6 +282,17 @@ public class IGM_CGM_preparation {
             }
             if(qname.equalsIgnoreCase("md:Model.DependentOn")){
                 my_depOn.add(atts.getValue("rdf:resource"));
+            }
+            if(qname.equalsIgnoreCase("md:Model.profile")){
+                ismodelProfile = true;
+            }
+        }
+
+        @Override
+        public void characters(char[] ch, int start, int length) {
+            if (ismodelProfile) {
+                modelProfile.add(new String(ch, start, length));
+                ismodelProfile=false;
             }
         }
 
