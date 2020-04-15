@@ -63,6 +63,8 @@ class XMITransformation {
 
     private class BDExtensions{
         HashMap<String,Node> CimProfiles = new HashMap<>();
+        HashMap<String,Node> ProcessType = new HashMap<>();
+        HashMap<String,Node> ToBeAdded = new HashMap<>();
     }
 
     private Set<String> classes = new HashSet<>();
@@ -278,8 +280,8 @@ class XMITransformation {
         addObject(target,nodeListsv,"md:FullModel",true);
         addObject(target,nodeListEqBd,"md:FullModel",true);
         addObject(target,nodeListTpBd,"md:FullModel",true);
-        addObject(target,nodeListEqBd,"cim:GeographicalRegion",false);
-        addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false);
+        eq_.putAll(addObject(target,nodeListEqBd,"cim:GeographicalRegion",false));
+        eq_.putAll(addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false));
         addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false);
 
 
@@ -456,7 +458,18 @@ class XMITransformation {
         }
 
 
-        addBdExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target);
+        addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target);
+        addProcessTypeExtension(EQ, eqbd,business,target);
+        /*for(String s: bdExtensions.ToBeAdded.keySet()){
+            if(eq_.containsKey(s)){
+                if(bdExtensions.ToBeAdded.get(s).hasChildNodes()){
+                    Node[] childs = convertToArray(bdExtensions.ToBeAdded.get(s).getChildNodes());
+                    for (Node child : childs) {
+
+                    }
+                }
+            }
+        }*/
 
 
         cleanXml(target);
@@ -478,7 +491,7 @@ class XMITransformation {
     }
 
 
-    private void addBdExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
+    private void addCimProfileExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
         Set<String> cimprofilesuris = new HashSet<>();
         cimprofilesuris.addAll(EQ.modelProfile);
         cimprofilesuris.addAll(TP.modelProfile);
@@ -501,6 +514,21 @@ class XMITransformation {
 
     }
 
+    private void addProcessTypeExtension(Profile EQ, Profile EQBD, String business, Document target){
+        if(bdExtensions.ProcessType.containsKey(business)){
+            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+            extEq.setAttribute("rdf:resource", EQBD.id);
+            addNode(target,bdExtensions.ProcessType.get(business)).appendChild(extEq);
+        }
+        else{
+            for(String s : bdExtensions.ProcessType.keySet()){
+                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                extEq.setAttribute("rdf:resource", EQBD.id);
+                addNode(target,bdExtensions.ProcessType.get(s)).appendChild(extEq);
+            }
+        }
+    }
+
 
     private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
         Node[] bdExts = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("bdExtensions"))));
@@ -516,6 +544,20 @@ class XMITransformation {
                         }
                     }
                 }
+                else if(StringUtils.contains(bdExt.getLocalName(),"ProcessType")){
+                    if(bdExt.hasChildNodes()){
+                        for (Node node : convertToArray(bdExt.getChildNodes())) {
+                            if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"IdentifiedObject.name")){
+                                bdExtensions.ProcessType.put(node.getTextContent(),bdExt);
+                            }
+                        }
+                    }
+                }
+
+                else{
+                    bdExtensions.ToBeAdded.put(bdExt.getAttributes().item(0).getNodeValue(), bdExt);
+                }
+
             }
         }
     }
@@ -871,20 +913,25 @@ class XMITransformation {
      * @throws IOException
      * @throws TransformerException
      */
-    private void addObject(Document doc, NodeList nodeList, String s, boolean begin) throws IOException, TransformerException {
+    private HashMap<String,Node> addObject(Document doc, NodeList nodeList, String s, boolean begin) throws IOException, TransformerException {
         NodeList nodes = nodeList.item(0).getOwnerDocument().getElementsByTagName(s);
+        HashMap<String,Node> addedNodes = new HashMap<>();
         for(int i=0; i<nodes.getLength();i++){
             if(nodes.item(i).getLocalName()!=null){
+                Node node;
 
                 if(begin) {
-                    doc.getDocumentElement().insertBefore(doc.importNode(nodes.item(i), true), doc.getDocumentElement().getChildNodes().item(0));
+                   node= doc.getDocumentElement().insertBefore(doc.importNode(nodes.item(i), true), doc.getDocumentElement().getChildNodes().item(0));
                 }
                 else{
-                    doc.getDocumentElement().appendChild(doc.importNode(nodes.item(i),true));
+                    node= doc.getDocumentElement().appendChild(doc.importNode(nodes.item(i),true));
                 }
-            }
-        }
 
+                addedNodes.put(node.getAttributes().item(0).getNodeValue(), node);
+            }
+
+        }
+        return addedNodes;
     }
 
 
