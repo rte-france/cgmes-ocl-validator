@@ -146,52 +146,7 @@ class XMITransformation {
         });
 
 
-       /* System.exit(0);
-        System.out.println(IGM_CGM.size());
-        for(Profile key : IGM_CGM.keySet()){
-            Document resulting_xmi ;
 
-            Profile EQBD = null;
-            Profile TPBD = null;
-            List<String> sv_sn = new ArrayList<>();
-
-
-            Profile EQ = null;
-            Profile SSH = null;
-            Profile TP = null;
-
-            sv_sn.add(getSimpleNameNoExt(key));
-
-            for(Profile value : IGM_CGM.get(key)){
-                switch (value.type){
-                    case EQ:
-                        EQ = value;
-                        break;
-                    case TP:
-                        TP = value;
-                        break;
-                    case SSH:
-                        SSH = value;
-                        break;
-                    case other:
-                        if(value.file.getName().contains("_EQBD_")){
-                            EQBD=value;
-                        } else{
-                            TPBD=value;
-                        }
-                        break;
-                }
-            }
-
-            Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
-            LOGGER.info("Merged and cleaned:"+key.xml_name);
-            resulting_xmi = createXmi(merged_xml);
-            LOGGER.info("Transformed:"+key.xml_name);
-
-            xmi_map.put(sv_sn.get(0),resulting_xmi);
-
-        }
-        System.exit(0);*/
         return xmi_map;
 
     }
@@ -271,6 +226,7 @@ class XMITransformation {
         brlndType.put("TP","TpModel");
         brlndType.put("SSH","SshModel");
         brlndType.put("SV","SvModel");
+
 
         NodeList nodeListeq = correctDeps(getNodeList(EQ), EQ.DepToBeReplaced,defaultBDIds.get(0));
 
@@ -423,10 +379,24 @@ class XMITransformation {
                     addNode(target,BDObjects.get(t).BVn);
                     declaredBV.put(bv,BDObjects.get(t).BVn);
                 }
-                addNode(target,BDObjects.get(t).TPn);
-                addNode(target,BDObjects.get(t).EQn);
-                if(isNb || isusingCN)
-                    addNode(target,BDObjects.get(t).CNn);
+                Node TpBdAdd = addNode(target,BDObjects.get(t).TPn);
+                Element extTp = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
+                extTp.setAttribute("rdf:resource", tpbd.id);
+                TpBdAdd.appendChild(extTp);
+                Node EqBdAdd = addNode(target,BDObjects.get(t).EQn);
+                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                extEq.setAttribute("rdf:resource", eqbd.id);
+                EqBdAdd.appendChild(extEq);
+                if(isNb || isusingCN) {
+                    Node CnBdAdd = addNode(target,BDObjects.get(t).CNn);
+                    Element extTpCn = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
+                    extTpCn.setAttribute("rdf:resource", tpbd.id);
+                    Element extEqCn = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                    extEqCn.setAttribute("rdf:resource", eqbd.id);
+                    CnBdAdd.appendChild(extEqCn);
+                    CnBdAdd.appendChild(extTpCn);
+                }
+
 
             }
             else{
@@ -490,6 +460,8 @@ class XMITransformation {
         voltageLevels_=null;
         transf_=null;
 
+        printDocument(target, "Test_merge.xml");
+        System.exit(0);
        return  target;
 
     }
