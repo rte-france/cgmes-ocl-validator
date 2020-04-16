@@ -475,11 +475,12 @@ class XMITransformation {
         }
 
 
-        addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target);
-        addProcessTypeExtension(EQ, eqbd,business,target);
-        addGeographicalRegionExtension(EQ,eqbd,controlAreas,target,eq_);
-        addGenericExtensions(EQ,eqbd,target,eq_);
-
+        Set<Node> addExtensions = new HashSet<>();
+        addExtensions.addAll(addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target));
+        addExtensions.addAll(addProcessTypeExtension(business,target));
+        addExtensions.addAll(addGeographicalRegionExtension(controlAreas,target,eq_));
+        addExtensions.addAll(addGenericExtensions(target,eq_));
+        addModelBrlndDependency(EQ,eqbd,addExtensions,target);
 
 
         cleanXml(target);
@@ -501,7 +502,15 @@ class XMITransformation {
     }
 
 
-    private void addCimProfileExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
+    private void addModelBrlndDependency(Profile EQ, Profile EQBD, Set<Node> nodes, Document target){
+        for (Node node : nodes) {
+            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+            extEq.setAttribute("rdf:resource", EQBD.id);
+            node.appendChild(extEq);
+        }
+    }
+
+    private Set<Node> addCimProfileExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
         Set<String> cimprofilesuris = new HashSet<>();
         cimprofilesuris.addAll(EQ.modelProfile);
         cimprofilesuris.addAll(TP.modelProfile);
@@ -509,43 +518,36 @@ class XMITransformation {
         cimprofilesuris.addAll(SV.modelProfile);
         cimprofilesuris.addAll(EQBD.modelProfile);
         cimprofilesuris.addAll(TPBD.modelProfile);
+        Set<Node> nodes = new HashSet<>();
         for (String s : cimprofilesuris) {
             if(bdExtensions.CimProfiles.containsKey(s)){
-                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                extEq.setAttribute("rdf:resource", EQBD.id);
-                addNode(target, bdExtensions.CimProfiles.get(s)).appendChild(extEq);
+                nodes.add(addNode(target, bdExtensions.CimProfiles.get(s)));
             }
             else if (StringUtils.contains(s,"/EquipmentBoundary/")){
-                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                extEq.setAttribute("rdf:resource", EQBD.id);
-                addNode(target, bdExtensions.CimProfiles.get("http://iec.ch/TC57/2013/61970-452/EquipmentBoundary/3")).appendChild(extEq);
+                nodes.add(addNode(target, bdExtensions.CimProfiles.get("http://iec.ch/TC57/2013/61970-452/EquipmentBoundary/3")));
             }
         }
-
+        return nodes;
     }
 
-    private void addProcessTypeExtension(Profile EQ, Profile EQBD, String business, Document target){
+    private Set<Node> addProcessTypeExtension(String business, Document target){
+        Set<Node> nodes = new HashSet<>();
         if(bdExtensions.ProcessType.containsKey(business)){
-            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-            extEq.setAttribute("rdf:resource", EQBD.id);
-            addNode(target,bdExtensions.ProcessType.get(business)).appendChild(extEq);
+            nodes.add(addNode(target,bdExtensions.ProcessType.get(business)));
         }
         else{
             for(String s : bdExtensions.ProcessType.keySet()){
-                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                extEq.setAttribute("rdf:resource", EQBD.id);
-                addNode(target,bdExtensions.ProcessType.get(s)).appendChild(extEq);
+                nodes.add(addNode(target,bdExtensions.ProcessType.get(s)));
             }
         }
+        return nodes;
     }
 
-    private void addGeographicalRegionExtension(Profile EQ, Profile EQBD,Set<String> controlAreas, Document target, HashMap<String,Node> eqids){
-
+    private Set<Node> addGeographicalRegionExtension(Set<String> controlAreas, Document target, HashMap<String,Node> eqids){
+        Set<Node> nodes = new HashSet<>();
         for (String controlArea : controlAreas) {
             if(bdExtensions.GeographicalRegionEIC.containsKey(controlArea)){
-                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                extEq.setAttribute("rdf:resource", EQBD.id);
-                addNode(target,bdExtensions.GeographicalRegionEIC.get(controlArea)).appendChild(extEq);
+                nodes.add(addNode(target,bdExtensions.GeographicalRegionEIC.get(controlArea)));
                 Node myGeo = bdExtensions.GeographicalRegionEIC.get(controlArea);
                 String modelingAuthority = null;
                 if(myGeo.hasChildNodes()){
@@ -557,9 +559,7 @@ class XMITransformation {
                 }
 
                 if(bdExtensions.ModelingAuthority.containsKey(modelingAuthority)){
-                    Element extEq_ = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                    extEq_.setAttribute("rdf:resource", EQBD.id);
-                    addNode(target,bdExtensions.ModelingAuthority.get(modelingAuthority)).appendChild(extEq_);
+                    nodes.add(addNode(target,bdExtensions.ModelingAuthority.get(modelingAuthority)));
                 }
 
             }
@@ -568,38 +568,34 @@ class XMITransformation {
         for (String s : bdExtensions.GeographicalRegionIds.keySet()) {
             if(eqids.containsKey(s)){
                 if(bdExtensions.GeographicalRegionIds.get(s).hasChildNodes()){
-                    Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                    extEq.setAttribute("rdf:resource", EQBD.id);
-                    eqids.get(s).appendChild(extEq);
                     for (Node node : convertToArray(bdExtensions.GeographicalRegionIds.get(s).getChildNodes())) {
                         eqids.get(s).appendChild(target.importNode(node,true));
                     }
+                    nodes.add(eqids.get(s));
                 }
             }
         }
+        return nodes;
 
     }
 
 
-    private void addGenericExtensions(Profile EQ, Profile EQBD, Document target,HashMap<String,Node> eqids){
-
+    private Set<Node> addGenericExtensions(Document target, HashMap<String,Node> eqids){
+        Set<Node> nodes = new HashSet<>();
         for(String s: bdExtensions.ToBeAdded.keySet()){
             if(eqids.containsKey(s)){
                 if(bdExtensions.ToBeAdded.get(s).hasChildNodes()){
-                    Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                    extEq.setAttribute("rdf:resource", EQBD.id);
-                    eqids.get(s).appendChild(extEq);
                     for (Node node : convertToArray(bdExtensions.ToBeAdded.get(s).getChildNodes())) {
                         eqids.get(s).appendChild(target.importNode(node,true));
                     }
+                    nodes.add(eqids.get(s));
                 }
             }
             else {
-                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                extEq.setAttribute("rdf:resource", EQBD.id);
-                addNode(target,bdExtensions.ToBeAdded.get(s)).appendChild(extEq);
+                nodes.add(addNode(target,bdExtensions.ToBeAdded.get(s)));
             }
         }
+        return nodes;
     }
 
 
