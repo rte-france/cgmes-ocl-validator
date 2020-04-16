@@ -478,16 +478,8 @@ class XMITransformation {
         addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target);
         addProcessTypeExtension(EQ, eqbd,business,target);
         addGeographicalRegionExtension(EQ,eqbd,controlAreas,target,eq_);
-        /*for(String s: bdExtensions.ToBeAdded.keySet()){
-            if(eq_.containsKey(s)){
-                if(bdExtensions.ToBeAdded.get(s).hasChildNodes()){
-                    Node[] childs = convertToArray(bdExtensions.ToBeAdded.get(s).getChildNodes());
-                    for (Node child : childs) {
+        addGenericExtensions(EQ,eqbd,target,eq_);
 
-                    }
-                }
-            }
-        }*/
 
 
         cleanXml(target);
@@ -589,6 +581,26 @@ class XMITransformation {
     }
 
 
+    private void addGenericExtensions(Profile EQ, Profile EQBD, Document target,HashMap<String,Node> eqids){
+
+        for(String s: bdExtensions.ToBeAdded.keySet()){
+            if(eqids.containsKey(s)){
+                if(bdExtensions.ToBeAdded.get(s).hasChildNodes()){
+                    Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                    extEq.setAttribute("rdf:resource", EQBD.id);
+                    eqids.get(s).appendChild(extEq);
+                    for (Node node : convertToArray(bdExtensions.ToBeAdded.get(s).getChildNodes())) {
+                        eqids.get(s).appendChild(target.importNode(node,true));
+                    }
+                }
+            }
+            else {
+                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                extEq.setAttribute("rdf:resource", EQBD.id);
+                addNode(target,bdExtensions.ToBeAdded.get(s)).appendChild(extEq);
+            }
+        }
+    }
 
 
     private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
