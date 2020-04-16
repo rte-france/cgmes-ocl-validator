@@ -285,7 +285,7 @@ class XMITransformation {
         addObject(target,nodeListTpBd,"md:FullModel",true);
         eq_.putAll(addObject(target,nodeListEqBd,"cim:GeographicalRegion",false));
         eq_.putAll(addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false));
-        addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false);
+        addModelBrlndDependency(new HashSet<Node>(addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false).values()),EQ.type,eqbd.id,target);
 
 
         HashMap<String,Node> declaredBV = new HashMap<>();
@@ -480,7 +480,7 @@ class XMITransformation {
         addExtensions.addAll(addProcessTypeExtension(business,target));
         addExtensions.addAll(addGeographicalRegionExtension(controlAreas,target,eq_));
         addExtensions.addAll(addGenericExtensions(target,eq_));
-        addModelBrlndDependency(EQ,eqbd,addExtensions,target);
+        addModelBrlndDependency(addExtensions,EQ.type,eqbd.id,target);
 
 
         cleanXml(target);
@@ -502,10 +502,10 @@ class XMITransformation {
     }
 
 
-    private void addModelBrlndDependency(Profile EQ, Profile EQBD, Set<Node> nodes, Document target){
+    private void addModelBrlndDependency(Set<Node> nodes, Profile.Type type, String id, Document target){
         for (Node node : nodes) {
-            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-            extEq.setAttribute("rdf:resource", EQBD.id);
+            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(type.toString()));
+            extEq.setAttribute("rdf:resource", id);
             node.appendChild(extEq);
         }
     }
