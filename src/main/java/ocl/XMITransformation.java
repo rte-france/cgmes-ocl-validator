@@ -65,6 +65,9 @@ class XMITransformation {
         HashMap<String,Node> CimProfiles = new HashMap<>();
         HashMap<String,Node> ProcessType = new HashMap<>();
         HashMap<String,Node> ToBeAdded = new HashMap<>();
+        HashMap<String,Node> ModelingAuthority = new HashMap<>();
+        HashMap<String,Node> GeographicalRegionIds = new HashMap<>();
+        HashMap<String,Node> GeographicalRegionEIC = new HashMap<>();
     }
 
     private Set<String> classes = new HashSet<>();
@@ -326,6 +329,20 @@ class XMITransformation {
             }
         }
 
+        Set<String> controlAreas = new HashSet<>();
+
+        Node[] controlArea = convertToArray(target.getElementsByTagName("cim:ControlArea"));
+        for (Node node : controlArea) {
+            if(!StringUtils.isEmpty(node.getLocalName()) && node.hasChildNodes()){
+                Node[] childs = convertToArray(node.getChildNodes());
+                for (Node child : childs) {
+                    if(StringUtils.contains(child.getLocalName(),"IdentifiedObject.energyIdentCodeEic")){
+                        controlAreas.add(child.getTextContent());
+                    }
+                }
+            }
+        }
+
         Node[] SSHnodes = convertToArray(nodeListssh);
         for (Node node : SSHnodes) {
             if(!StringUtils.isEmpty(node.getLocalName())){
@@ -460,6 +477,7 @@ class XMITransformation {
 
         addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target);
         addProcessTypeExtension(EQ, eqbd,business,target);
+        addGeographicalRegionExtension(EQ,eqbd,controlAreas,target,eq_);
         /*for(String s: bdExtensions.ToBeAdded.keySet()){
             if(eq_.containsKey(s)){
                 if(bdExtensions.ToBeAdded.get(s).hasChildNodes()){
@@ -483,7 +501,7 @@ class XMITransformation {
         SSHnodes = null;
         voltageLevels_=null;
         transf_=null;
-        System.out.println("Printing");
+        LOGGER.info("printing");
         printDocument(target, "Test_merge.xml");
         System.exit(0);
        return  target;
@@ -529,6 +547,49 @@ class XMITransformation {
         }
     }
 
+    private void addGeographicalRegionExtension(Profile EQ, Profile EQBD,Set<String> controlAreas, Document target, HashMap<String,Node> eqids){
+
+        for (String controlArea : controlAreas) {
+            if(bdExtensions.GeographicalRegionEIC.containsKey(controlArea)){
+                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                extEq.setAttribute("rdf:resource", EQBD.id);
+                addNode(target,bdExtensions.GeographicalRegionEIC.get(controlArea)).appendChild(extEq);
+                Node myGeo = bdExtensions.GeographicalRegionEIC.get(controlArea);
+                String modelingAuthority = null;
+                if(myGeo.hasChildNodes()){
+                    for (Node node : convertToArray(myGeo.getChildNodes())) {
+                        if(StringUtils.contains(node.getLocalName(),"MARegion.ModelingAuthority")){
+                            modelingAuthority = node.getAttributes().item(0).getNodeValue().replace("#","");
+                        }
+                    }
+                }
+
+                if(bdExtensions.ModelingAuthority.containsKey(modelingAuthority)){
+                    Element extEq_ = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                    extEq_.setAttribute("rdf:resource", EQBD.id);
+                    addNode(target,bdExtensions.ModelingAuthority.get(modelingAuthority)).appendChild(extEq_);
+                }
+
+            }
+        }
+
+        for (String s : bdExtensions.GeographicalRegionIds.keySet()) {
+            if(eqids.containsKey(s)){
+                if(bdExtensions.GeographicalRegionIds.get(s).hasChildNodes()){
+                    Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
+                    extEq.setAttribute("rdf:resource", EQBD.id);
+                    eqids.get(s).appendChild(extEq);
+                    for (Node node : convertToArray(bdExtensions.GeographicalRegionIds.get(s).getChildNodes())) {
+                        eqids.get(s).appendChild(target.importNode(node,true));
+                    }
+                }
+            }
+        }
+
+    }
+
+
+
 
     private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
         Node[] bdExts = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("bdExtensions"))));
@@ -549,6 +610,21 @@ class XMITransformation {
                         for (Node node : convertToArray(bdExt.getChildNodes())) {
                             if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"IdentifiedObject.name")){
                                 bdExtensions.ProcessType.put(node.getTextContent(),bdExt);
+                            }
+                        }
+                    }
+                }
+
+                else if(StringUtils.contains(bdExt.getLocalName(),"ModelingAuthority")){
+                    bdExtensions.ModelingAuthority.put(bdExt.getAttributes().item(0).getNodeValue(),bdExt);
+                }
+
+                else if(StringUtils.contains(bdExt.getLocalName(),"GeographicalRegion")){
+                    bdExtensions.GeographicalRegionIds.put(bdExt.getAttributes().item(0).getNodeValue(),bdExt);
+                    if(bdExt.hasChildNodes()){
+                        for (Node node : convertToArray(bdExt.getChildNodes())) {
+                            if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"IdentifiedObject.energyIdentCodeEic")){
+                                bdExtensions.GeographicalRegionEIC.put(node.getTextContent(),bdExt);
                             }
                         }
                     }
