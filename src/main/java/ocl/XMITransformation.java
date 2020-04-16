@@ -470,9 +470,7 @@ class XMITransformation {
         SSHnodes = null;
         voltageLevels_=null;
         transf_=null;
-        LOGGER.info("printing");
-        printDocument(target, "Test_merge.xml");
-        System.exit(0);
+
        return  target;
 
     }
@@ -644,6 +642,7 @@ class XMITransformation {
         DocumentBuilder builder = builderFactory.newDocumentBuilder();
         Document xmi = builder.newDocument();
 
+
         HashMap<String,Integer> numbering = new HashMap<>();
         Node[] objects = convertToArray(target.getDocumentElement().getChildNodes());
         int count = 0;
@@ -658,10 +657,14 @@ class XMITransformation {
         Node[] lines = convertToArray(target.getDocumentElement().getChildNodes());
         Node[] basics = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("basic_model"))));
 
-        xmi.appendChild(xmi.createElementNS("http://Model/1.0/CGMES", "CGMES:DataSet"));
+
+
+        xmi.appendChild(xmi.createElementNS("http://Model/1.0/CGMES/IEC61970/Base/MetaData", "MetaData:DataSet"));
         for(String s : authExt.keySet()){
             xmi.getDocumentElement().setAttributeNS(authExt.get("xmlns"),"xmlns:"+s,authExt.get(s) );
         }
+        System.out.println(xmiXmlns);
+
 
         for(String s: xmiXmlns.keySet()){
             if(s.contains("schemaLocation"))
@@ -681,12 +684,15 @@ class XMITransformation {
         xmi.getDocumentElement().setAttribute("isEQoperation", Boolean.toString(isNb));
         xmi.getDocumentElement().setAttribute("isEQshortCircuit", Boolean.toString(isShortCircuit));
 
+
+
         for (Node basic : basics) {
             if(!StringUtils.isEmpty(basic.getLocalName())){
                 xmi.getDocumentElement().appendChild(xmi.importNode(basic,true));
 
             }
         }
+
 
         for (Node line : lines) {
             if(!StringUtils.isEmpty(line.getLocalName())){
@@ -736,7 +742,9 @@ class XMITransformation {
                 xmi.getDocumentElement().appendChild(datasetmember);
             }
         }
-
+        LOGGER.info("printing");
+        printDocument(xmi, "Test_merge.xml");
+        System.exit(0);
         lines = null;
 
         return xmi;
@@ -764,6 +772,8 @@ class XMITransformation {
 
         }
 
+
+
         String schema = " ";
         for(String s: xmiXmlns.keySet()){
             schema+= xmiXmlns.get(s);
@@ -773,7 +783,6 @@ class XMITransformation {
         xmiXmlns.put("xsi","http://www.w3.org/2001/XMLSchema-instance");
         xmiXmlns.put("ecore","http://www.eclipse.org/emf/2002/Ecore");
         xmiXmlns.put("uml","http://www.omg.org/spec/UML/20131001");
-
 
         xmiXmlns.put("schemaLocation", schema);
 
@@ -874,7 +883,9 @@ class XMITransformation {
         transformer.setOutputProperty(OutputKeys.METHOD, "xml");
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
 
 
         transformer.transform(new DOMSource(doc),new StreamResult(new File("/home/chiaramellomar/EMF_meetings/ocl_validator/models/"+name)));
