@@ -269,9 +269,7 @@ class XMITransformation {
         for (Node eQnode : EQnodes) {
             if(!StringUtils.isEmpty(eQnode.getLocalName())){
                 if(!StringUtils.contains(eQnode.getLocalName(),"FullModel")){
-                    Element ext = target.createElement("brlnd:ModelObject." + brlndType.get(EQ.type.toString()));
-                    ext.setAttribute("rdf:resource", EQ.id);
-                    eQnode.appendChild(ext);
+                    addModelBrlndDependency(eQnode,EQ.type,EQ.id,target);
                 }
                 eq_.put(eQnode.getAttributes().item(0).getNodeValue(),eQnode);
             }
@@ -349,9 +347,6 @@ class XMITransformation {
                 String id = node.getAttributes().item(0).getNodeValue().replaceAll("#","");
                 if(eq_.containsKey(id) && !node.getLocalName().contains("FullModel")){
                     if(node.hasChildNodes()){
-                        Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
-                        ext.setAttribute("rdf:resource", SSH.id);
-
                         for(int c=0; c<node.getChildNodes().getLength();c++){
                             if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName()) && !StringUtils.contains(node.getChildNodes().item(c).getLocalName(),"name")){
                                 Node node1 = target.importNode(node.getChildNodes().item(c),true);
@@ -360,8 +355,7 @@ class XMITransformation {
                             }
 
                         }
-                        eq_.get(id).appendChild(ext);
-
+                        addModelBrlndDependency(eq_.get(id),SSH.type,SSH.id,target);
                     }
                 }
             }
@@ -377,11 +371,9 @@ class XMITransformation {
                     if(nodeListtp.item(i).hasChildNodes()){
                         for(int c=0; c<nodeListtp.item(i).getChildNodes().getLength();c++){
                             if(nodeListtp.item(i).getChildNodes().item(c).getLocalName()!=null && !StringUtils.contains(nodeListtp.item(i).getChildNodes().item(c).getLocalName(),"name")) {
-                                Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                                ext.setAttribute("rdf:resource", TP.id);
                                 Node node = eq_.get(id).getOwnerDocument().importNode(nodeListtp.item(i).getChildNodes().item(c),true);
                                 eq_.get(id).appendChild(node);
-                                eq_.get(id).appendChild(ext);
+                                addModelBrlndDependency(eq_.get(id), TP.type,TP.id,target);
                                 if(nodeListtp.item(i).getChildNodes().item(c).getLocalName().contains("TopologicalNode")){
                                     String tpid = nodeListtp.item(i).getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                                     if(BDObjects.containsKey(tpid)){
@@ -406,32 +398,18 @@ class XMITransformation {
                     addNode(target,BDObjects.get(t).BVn);
                     declaredBV.put(bv,BDObjects.get(t).BVn);
                 }
-                Node TpBdAdd = addNode(target,BDObjects.get(t).TPn);
-                Element extTp = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                extTp.setAttribute("rdf:resource", tpbd.id);
-                TpBdAdd.appendChild(extTp);
-                Node EqBdAdd = addNode(target,BDObjects.get(t).EQn);
-                Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                extEq.setAttribute("rdf:resource", eqbd.id);
-                EqBdAdd.appendChild(extEq);
+
+                addModelBrlndDependency(addNode(target,BDObjects.get(t).TPn),TP.type,tpbd.id,target);
+                addModelBrlndDependency(addNode(target,BDObjects.get(t).EQn), EQ.type,eqbd.id,target);
                 if(isNb || isusingCN) {
                     Node CnBdAdd = addNode(target,BDObjects.get(t).CNn);
-                    Element extTpCn = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                    extTpCn.setAttribute("rdf:resource", tpbd.id);
-                    Element extEqCn = target.createElement("brlnd:ModelObject."+brlndType.get(EQ.type.toString()));
-                    extEqCn.setAttribute("rdf:resource", eqbd.id);
-                    CnBdAdd.appendChild(extEqCn);
-                    CnBdAdd.appendChild(extTpCn);
+                    addModelBrlndDependency(CnBdAdd,TP.type,tpbd.id,target);
+                    addModelBrlndDependency(CnBdAdd,EQ.type,eqbd.id,target);
                 }
-
 
             }
             else{
-                Element ext_ = TPs2add.get(t).getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                ext_.setAttribute("rdf:resource", TP.id);
-                TPs2add.get(t).appendChild(ext_);
-                addNode(target,TPs2add.get(t));
-
+                addModelBrlndDependency(addNode(target,TPs2add.get(t)), TP.type,TP.id,target);
             }
         }
 
@@ -464,9 +442,7 @@ class XMITransformation {
                         }
                         Node my_node = addNode(target, sVnode);
                         if(sVnode.getLocalName().contains("TopologicalIsland") || sVnode.getLocalName().contains("SvStatus")){
-                            Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
-                            ext.setAttribute("rdf:resource", SV.id);
-                            my_node.appendChild(ext);
+                            addModelBrlndDependency(my_node,SV.type,SV.id,target);
                         }
 
                     }
@@ -508,6 +484,12 @@ class XMITransformation {
             extEq.setAttribute("rdf:resource", id);
             node.appendChild(extEq);
         }
+    }
+
+    private void addModelBrlndDependency(Node node, Profile.Type type, String id, Document target){
+            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(type.toString()));
+            extEq.setAttribute("rdf:resource", id);
+            node.appendChild(extEq);
     }
 
     private Set<Node> addCimProfileExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
