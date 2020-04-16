@@ -567,11 +567,18 @@ class XMITransformation {
 
         for (String s : bdExtensions.GeographicalRegionIds.keySet()) {
             if(eqids.containsKey(s)){
+                String modelingAuthority = null;
                 if(bdExtensions.GeographicalRegionIds.get(s).hasChildNodes()){
                     for (Node node : convertToArray(bdExtensions.GeographicalRegionIds.get(s).getChildNodes())) {
                         eqids.get(s).appendChild(target.importNode(node,true));
+                        if(StringUtils.contains(node.getLocalName(),"MARegion.ModelingAuthority")){
+                            modelingAuthority = node.getAttributes().item(0).getNodeValue().replace("#","");
+                        }
                     }
                     nodes.add(eqids.get(s));
+                    if(bdExtensions.ModelingAuthority.containsKey(modelingAuthority)){
+                        nodes.add(addNode(target,bdExtensions.ModelingAuthority.get(modelingAuthority)));
+                    }
                 }
             }
         }
