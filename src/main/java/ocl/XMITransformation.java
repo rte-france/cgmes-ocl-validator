@@ -303,7 +303,7 @@ class XMITransformation {
                 if(!declaredBV.containsKey(id)){
                     if(BVmap.containsKey(id)){
                         Node node1 = target.importNode(BVmap.get(id),true);
-                        target.getDocumentElement().appendChild(node1);
+                        addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
                         declaredBV.put(id,node1);
                     }
                 }
@@ -319,7 +319,7 @@ class XMITransformation {
                         String id = node.getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                         if (!declaredBV.containsKey(id) && BVmap.containsKey(id)){
                             Node node1 = target.importNode(BVmap.get(id),true);
-                            target.getDocumentElement().appendChild(node1);
+                            addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
                             declaredBV.put(id,node1);
                         }
                     }
@@ -395,7 +395,7 @@ class XMITransformation {
             if(BDObjects.containsKey(t)){
                 bv = BDObjects.get(t).BVn.getAttributes().item(0).getNodeValue();
                 if(!declaredBV.containsKey(bv)){
-                    addNode(target,BDObjects.get(t).BVn);
+                    addModelBrlndDependency(addNode(target,BDObjects.get(t).BVn),EQ.type,eqbd.id,target);
                     declaredBV.put(bv,BDObjects.get(t).BVn);
                 }
 
@@ -663,7 +663,6 @@ class XMITransformation {
         for(String s : authExt.keySet()){
             xmi.getDocumentElement().setAttributeNS(authExt.get("xmlns"),"xmlns:"+s,authExt.get(s) );
         }
-        System.out.println(xmiXmlns);
 
 
         for(String s: xmiXmlns.keySet()){
@@ -742,9 +741,7 @@ class XMITransformation {
                 xmi.getDocumentElement().appendChild(datasetmember);
             }
         }
-        LOGGER.info("printing");
-        printDocument(xmi, "Test_merge.xml");
-        System.exit(0);
+
         lines = null;
 
         return xmi;
@@ -1074,7 +1071,7 @@ class XMITransformation {
         Node modelPart = doc.createElement("brlnd:Model.modelPart");
         Node fileVersion = doc.createElement("brlnd:Model.fileVersion");
         Node sourcingRSC = doc.createElement("brlnd:Model.sourcingRSC");
-        Node syncArea = doc.createElement("brlnd:Model.synchronousArea");
+        //Node syncArea = doc.createElement("brlnd:Model.synchronousArea");
 
         fullmodel.item(0).appendChild(region);
         fullmodel.item(0).appendChild(bp);
@@ -1105,7 +1102,7 @@ class XMITransformation {
         fullmodel.item(0).appendChild(fileVersion);
 
         fullmodel.item(0).appendChild(sourcingRSC);
-        fullmodel.item(0).appendChild(syncArea);
+        //fullmodel.item(0).appendChild(syncArea);
     }
 
     /**
