@@ -40,6 +40,9 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+/**
+ *
+ */
 class XMITransformation {
 
     private static Logger LOGGER = null;
@@ -473,6 +476,12 @@ class XMITransformation {
     }
 
 
+    /**
+     * @param nodes
+     * @param type
+     * @param id
+     * @param target
+     */
     private void addModelBrlndDependency(Set<Node> nodes, Profile.Type type, String id, Document target){
         for (Node node : nodes) {
             Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(type.toString()));
@@ -481,12 +490,28 @@ class XMITransformation {
         }
     }
 
+    /**
+     * @param node
+     * @param type
+     * @param id
+     * @param target
+     */
     private void addModelBrlndDependency(Node node, Profile.Type type, String id, Document target){
             Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(type.toString()));
             extEq.setAttribute("rdf:resource", id);
             node.appendChild(extEq);
     }
 
+    /**
+     * @param EQ
+     * @param TP
+     * @param SSH
+     * @param SV
+     * @param EQBD
+     * @param TPBD
+     * @param target
+     * @return
+     */
     private Set<Node> addCimProfileExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
         Set<String> cimprofilesuris = new HashSet<>();
         cimprofilesuris.addAll(EQ.modelProfile);
@@ -507,6 +532,11 @@ class XMITransformation {
         return nodes;
     }
 
+    /**
+     * @param business
+     * @param target
+     * @return
+     */
     private Set<Node> addProcessTypeExtension(String business, Document target){
         Set<Node> nodes = new HashSet<>();
         if(bdExtensions.ProcessType.containsKey(business)){
@@ -520,6 +550,12 @@ class XMITransformation {
         return nodes;
     }
 
+    /**
+     * @param controlAreas
+     * @param target
+     * @param eqids
+     * @return
+     */
     private Set<Node> addGeographicalRegionExtension(Set<String> controlAreas, Document target, HashMap<String,Node> eqids){
         Set<Node> nodes = new HashSet<>();
         for (String controlArea : controlAreas) {
@@ -566,6 +602,11 @@ class XMITransformation {
     }
 
 
+    /**
+     * @param target
+     * @param eqids
+     * @return
+     */
     private Set<Node> addGenericExtensions(Document target, HashMap<String,Node> eqids){
         Set<Node> nodes = new HashSet<>();
         for(String s: bdExtensions.ToBeAdded.keySet()){
@@ -585,6 +626,12 @@ class XMITransformation {
     }
 
 
+    /**
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     */
     private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
         Node[] bdExts = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("bdExtensions"))));
 
@@ -633,6 +680,15 @@ class XMITransformation {
     }
 
 
+    /**
+     * @param target
+     * @return
+     * @throws URISyntaxException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     * @throws IOException
+     * @throws TransformerException
+     */
     private  Document createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
@@ -745,6 +801,13 @@ class XMITransformation {
         return xmi;
     }
 
+    /**
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     */
     private HashMap<String, String> parseEcoreXmi() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
         HashMap<String,String> sub = new HashMap<>();
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
@@ -871,6 +934,11 @@ class XMITransformation {
         return copy;
     }
 
+    /**
+     * @param doc
+     * @param name
+     * @throws TransformerException
+     */
     private static void printDocument(Document doc, String name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
@@ -886,18 +954,6 @@ class XMITransformation {
         transformer.transform(new DOMSource(doc),new StreamResult(new File("/home/chiaramellomar/EMF_meetings/ocl_validator/models/"+name)));
     }
 
-    private StreamResult convertToStream(Document doc) throws TransformerException {
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Transformer transformer = tf.newTransformer();
-        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
-        transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-        StreamResult result = new StreamResult(new ByteArrayOutputStream());
-        transformer.transform(new DOMSource(doc), result);
-        return result;
-    }
 
     /**
      *
@@ -1069,7 +1125,6 @@ class XMITransformation {
         Node modelPart = doc.createElement("brlnd:Model.modelPart");
         Node fileVersion = doc.createElement("brlnd:Model.fileVersion");
         Node sourcingRSC = doc.createElement("brlnd:Model.sourcingRSC");
-        //Node syncArea = doc.createElement("brlnd:Model.synchronousArea");
 
         fullmodel.item(0).appendChild(region);
         fullmodel.item(0).appendChild(bp);
@@ -1100,7 +1155,7 @@ class XMITransformation {
         fullmodel.item(0).appendChild(fileVersion);
 
         fullmodel.item(0).appendChild(sourcingRSC);
-        //fullmodel.item(0).appendChild(syncArea);
+
     }
 
     /**
@@ -1208,7 +1263,13 @@ class XMITransformation {
         return name;
     }
 
-
+    /**
+     *
+     * @param nodeList
+     * @param ToBeReplaced
+     * @param defaultBDId
+     * @return
+     */
     private NodeList correctDeps(NodeList nodeList, List<String> ToBeReplaced, String defaultBDId){
         NodeList dep = nodeList.item(0).getOwnerDocument().getElementsByTagName("md:Model.DependentOn");
         for (int i =0; i<dep.getLength();i++){
