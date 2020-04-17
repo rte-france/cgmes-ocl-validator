@@ -66,7 +66,14 @@ public class IGM_CGM_preparation {
                     UserHandler handler = new UserHandler();
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
-                    saxParser.parse(xmlStream, handler);
+                    try{
+                        saxParser.parse(xmlStream, handler);
+                    }catch (DoneParsingException e ){
+
+                    }catch (SAXException e ){
+                        LOGGER.severe("Problem with header processing when reordering");
+                        throw new RuntimeException(e);
+                    }
                     Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(), handler.modelProfile);
                     switch (profile.type) {
                         case SV:
@@ -238,7 +245,14 @@ public class IGM_CGM_preparation {
                     UserHandler handler = new UserHandler();
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
-                    saxParser.parse( xmlStream, handler );
+                    try {
+                        saxParser.parse(xmlStream, handler);
+                    }catch (DoneParsingException e){
+
+                    }catch (SAXException e){
+                        LOGGER.severe("Problem with header processing when reordering");
+                        throw new RuntimeException(e);
+                    }
                     if(Profile.getType(entry.getName()) == Profile.Type.other){
                         Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(),handler.modelProfile);
                         defaultBDs.add(profile);
@@ -280,10 +294,10 @@ public class IGM_CGM_preparation {
             if(qname.equalsIgnoreCase("md:FullModel")){
                 my_id=atts.getValue("rdf:about");
             }
-            if(qname.equalsIgnoreCase("md:Model.DependentOn")){
+            else if(qname.equalsIgnoreCase("md:Model.DependentOn")){
                 my_depOn.add(atts.getValue("rdf:resource"));
             }
-            if(qname.equalsIgnoreCase("md:Model.profile")){
+            else if(qname.equalsIgnoreCase("md:Model.profile")){
                 ismodelProfile = true;
             }
         }
@@ -295,6 +309,17 @@ public class IGM_CGM_preparation {
                 ismodelProfile=false;
             }
         }
+
+        @Override
+        public void endElement(String uri, String localName, String qName) throws SAXException {
+            if (qName.equalsIgnoreCase("md:FullModel")) {
+                throw new DoneParsingException();
+            }
+        }
+
+    }
+
+    static class DoneParsingException extends SAXException{
 
     }
 
