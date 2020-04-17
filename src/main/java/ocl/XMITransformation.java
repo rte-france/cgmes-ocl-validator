@@ -40,6 +40,9 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+/**
+ *
+ */
 class XMITransformation {
 
     private static Logger LOGGER = null;
@@ -61,6 +64,15 @@ class XMITransformation {
         Node BVn;
     }
 
+    private class BDExtensions{
+        HashMap<String,Node> CimProfiles = new HashMap<>();
+        HashMap<String,Node> ProcessType = new HashMap<>();
+        HashMap<String,Node> ToBeAdded = new HashMap<>();
+        HashMap<String,Node> ModelingAuthority = new HashMap<>();
+        HashMap<String,Node> GeographicalRegionIds = new HashMap<>();
+        HashMap<String,Node> GeographicalRegionEIC = new HashMap<>();
+    }
+
     private Set<String> classes = new HashSet<>();
     private HashMap<String, Integer> ruleLevels= new HashMap<>();
     private HashMap<String,BDObject> BDObjects = new HashMap<>();
@@ -71,6 +83,8 @@ class XMITransformation {
 
     private boolean isNb = false;
     private boolean isShortCircuit = false;
+    private BDExtensions bdExtensions = new BDExtensions();
+    private HashMap<String,String> brlndType = new HashMap<>();
 
     HashMap<String, Integer> getRuleLevels(){
         return ruleLevels;
@@ -93,6 +107,11 @@ class XMITransformation {
         setAuthExt();
         parseEcore();
         HashMap<String,Document> xmi_map = new HashMap<>();
+        parseBdExtensions();
+        brlndType.put("EQ","EqModel");
+        brlndType.put("TP","TpModel");
+        brlndType.put("SSH","SshModel");
+        brlndType.put("SV","SvModel");
 
 
         IGM_CGM.entrySet().parallelStream().forEach(entry->{
@@ -146,52 +165,7 @@ class XMITransformation {
         });
 
 
-       /* System.exit(0);
-        System.out.println(IGM_CGM.size());
-        for(Profile key : IGM_CGM.keySet()){
-            Document resulting_xmi ;
 
-            Profile EQBD = null;
-            Profile TPBD = null;
-            List<String> sv_sn = new ArrayList<>();
-
-
-            Profile EQ = null;
-            Profile SSH = null;
-            Profile TP = null;
-
-            sv_sn.add(getSimpleNameNoExt(key));
-
-            for(Profile value : IGM_CGM.get(key)){
-                switch (value.type){
-                    case EQ:
-                        EQ = value;
-                        break;
-                    case TP:
-                        TP = value;
-                        break;
-                    case SSH:
-                        SSH = value;
-                        break;
-                    case other:
-                        if(value.file.getName().contains("_EQBD_")){
-                            EQBD=value;
-                        } else{
-                            TPBD=value;
-                        }
-                        break;
-                }
-            }
-
-            Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
-            LOGGER.info("Merged and cleaned:"+key.xml_name);
-            resulting_xmi = createXmi(merged_xml);
-            LOGGER.info("Transformed:"+key.xml_name);
-
-            xmi_map.put(sv_sn.get(0),resulting_xmi);
-
-        }
-        System.exit(0);*/
         return xmi_map;
 
     }
@@ -266,11 +240,8 @@ class XMITransformation {
      */
     private synchronized Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 
-        HashMap<String,String> brlndType = new HashMap<>();
-        brlndType.put("EQ","EqModel");
-        brlndType.put("TP","TpModel");
-        brlndType.put("SSH","SshModel");
-        brlndType.put("SV","SvModel");
+
+
 
         NodeList nodeListeq = correctDeps(getNodeList(EQ), EQ.DepToBeReplaced,defaultBDIds.get(0));
 
@@ -282,6 +253,7 @@ class XMITransformation {
         isNb = isNb(nodeListeq);
         Document target = nodeListeq.item(0).getOwnerDocument();
         target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
+        target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
 
         addFullModelInfo(target,"EQ",business);
         addFullModelInfo(nodeListtp.item(0).getOwnerDocument(),"TP",business);
@@ -300,9 +272,7 @@ class XMITransformation {
         for (Node eQnode : EQnodes) {
             if(!StringUtils.isEmpty(eQnode.getLocalName())){
                 if(!StringUtils.contains(eQnode.getLocalName(),"FullModel")){
-                    Element ext = target.createElement("brlnd:ModelObject." + brlndType.get(EQ.type.toString()));
-                    ext.setAttribute("rdf:resource", EQ.id);
-                    eQnode.appendChild(ext);
+                    addModelBrlndDependency(eQnode,EQ.type,EQ.id,target);
                 }
                 eq_.put(eQnode.getAttributes().item(0).getNodeValue(),eQnode);
             }
@@ -314,9 +284,9 @@ class XMITransformation {
         addObject(target,nodeListsv,"md:FullModel",true);
         addObject(target,nodeListEqBd,"md:FullModel",true);
         addObject(target,nodeListTpBd,"md:FullModel",true);
-        addObject(target,nodeListEqBd,"cim:GeographicalRegion",false);
-        addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false);
-        addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false);
+        eq_.putAll(addObject(target,nodeListEqBd,"cim:GeographicalRegion",false));
+        eq_.putAll(addObject(target,nodeListEqBd,"cim:SubGeographicalRegion",false));
+        addModelBrlndDependency(new HashSet<Node>(addObject(target,nodeListEqBd,"entsoe:EnergySchedulingType",false).values()),EQ.type,eqbd.id,target);
 
 
         HashMap<String,Node> declaredBV = new HashMap<>();
@@ -336,7 +306,7 @@ class XMITransformation {
                 if(!declaredBV.containsKey(id)){
                     if(BVmap.containsKey(id)){
                         Node node1 = target.importNode(BVmap.get(id),true);
-                        target.getDocumentElement().appendChild(node1);
+                        addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
                         declaredBV.put(id,node1);
                     }
                 }
@@ -352,9 +322,23 @@ class XMITransformation {
                         String id = node.getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                         if (!declaredBV.containsKey(id) && BVmap.containsKey(id)){
                             Node node1 = target.importNode(BVmap.get(id),true);
-                            target.getDocumentElement().appendChild(node1);
+                            addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
                             declaredBV.put(id,node1);
                         }
+                    }
+                }
+            }
+        }
+
+        Set<String> controlAreas = new HashSet<>();
+
+        Node[] controlArea = convertToArray(target.getElementsByTagName("cim:ControlArea"));
+        for (Node node : controlArea) {
+            if(!StringUtils.isEmpty(node.getLocalName()) && node.hasChildNodes()){
+                Node[] childs = convertToArray(node.getChildNodes());
+                for (Node child : childs) {
+                    if(StringUtils.contains(child.getLocalName(),"IdentifiedObject.energyIdentCodeEic")){
+                        controlAreas.add(child.getTextContent());
                     }
                 }
             }
@@ -366,9 +350,6 @@ class XMITransformation {
                 String id = node.getAttributes().item(0).getNodeValue().replaceAll("#","");
                 if(eq_.containsKey(id) && !node.getLocalName().contains("FullModel")){
                     if(node.hasChildNodes()){
-                        Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(SSH.type.toString()));
-                        ext.setAttribute("rdf:resource", SSH.id);
-
                         for(int c=0; c<node.getChildNodes().getLength();c++){
                             if(!StringUtils.isEmpty(node.getChildNodes().item(c).getLocalName()) && !StringUtils.contains(node.getChildNodes().item(c).getLocalName(),"name")){
                                 Node node1 = target.importNode(node.getChildNodes().item(c),true);
@@ -377,8 +358,7 @@ class XMITransformation {
                             }
 
                         }
-                        eq_.get(id).appendChild(ext);
-
+                        addModelBrlndDependency(eq_.get(id),SSH.type,SSH.id,target);
                     }
                 }
             }
@@ -394,11 +374,9 @@ class XMITransformation {
                     if(nodeListtp.item(i).hasChildNodes()){
                         for(int c=0; c<nodeListtp.item(i).getChildNodes().getLength();c++){
                             if(nodeListtp.item(i).getChildNodes().item(c).getLocalName()!=null && !StringUtils.contains(nodeListtp.item(i).getChildNodes().item(c).getLocalName(),"name")) {
-                                Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                                ext.setAttribute("rdf:resource", TP.id);
                                 Node node = eq_.get(id).getOwnerDocument().importNode(nodeListtp.item(i).getChildNodes().item(c),true);
                                 eq_.get(id).appendChild(node);
-                                eq_.get(id).appendChild(ext);
+                                addModelBrlndDependency(eq_.get(id), TP.type,TP.id,target);
                                 if(nodeListtp.item(i).getChildNodes().item(c).getLocalName().contains("TopologicalNode")){
                                     String tpid = nodeListtp.item(i).getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
                                     if(BDObjects.containsKey(tpid)){
@@ -420,21 +398,21 @@ class XMITransformation {
             if(BDObjects.containsKey(t)){
                 bv = BDObjects.get(t).BVn.getAttributes().item(0).getNodeValue();
                 if(!declaredBV.containsKey(bv)){
-                    addNode(target,BDObjects.get(t).BVn);
+                    addModelBrlndDependency(addNode(target,BDObjects.get(t).BVn),EQ.type,eqbd.id,target);
                     declaredBV.put(bv,BDObjects.get(t).BVn);
                 }
-                addNode(target,BDObjects.get(t).TPn);
-                addNode(target,BDObjects.get(t).EQn);
-                if(isNb || isusingCN)
-                    addNode(target,BDObjects.get(t).CNn);
+
+                addModelBrlndDependency(addNode(target,BDObjects.get(t).TPn),TP.type,tpbd.id,target);
+                addModelBrlndDependency(addNode(target,BDObjects.get(t).EQn), EQ.type,eqbd.id,target);
+                if(isNb || isusingCN) {
+                    Node CnBdAdd = addNode(target,BDObjects.get(t).CNn);
+                    addModelBrlndDependency(CnBdAdd,TP.type,tpbd.id,target);
+                    addModelBrlndDependency(CnBdAdd,EQ.type,eqbd.id,target);
+                }
 
             }
             else{
-                Element ext_ = TPs2add.get(t).getOwnerDocument().createElement("brlnd:ModelObject."+brlndType.get(TP.type.toString()));
-                ext_.setAttribute("rdf:resource", TP.id);
-                TPs2add.get(t).appendChild(ext_);
-                addNode(target,TPs2add.get(t));
-
+                addModelBrlndDependency(addNode(target,TPs2add.get(t)), TP.type,TP.id,target);
             }
         }
 
@@ -466,16 +444,20 @@ class XMITransformation {
                             }
                         }
                         Node my_node = addNode(target, sVnode);
-                        if(sVnode.getLocalName().contains("TopologicalIsland") || sVnode.getLocalName().contains("SvStatus")){
-                            Element ext = target.createElement("brlnd:ModelObject."+brlndType.get(SV.type.toString()));
-                            ext.setAttribute("rdf:resource", SV.id);
-                            my_node.appendChild(ext);
-                        }
+                        addModelBrlndDependency(my_node,SV.type,SV.id,target);
 
                     }
                 }
             }
         }
+
+
+        Set<Node> addExtensions = new HashSet<>();
+        addExtensions.addAll(addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target));
+        addExtensions.addAll(addProcessTypeExtension(business,target));
+        addExtensions.addAll(addGeographicalRegionExtension(controlAreas,target,eq_));
+        addExtensions.addAll(addGenericExtensions(target,eq_));
+        addModelBrlndDependency(addExtensions,EQ.type,eqbd.id,target);
 
 
         cleanXml(target);
@@ -489,12 +471,224 @@ class XMITransformation {
         SSHnodes = null;
         voltageLevels_=null;
         transf_=null;
-
        return  target;
 
     }
 
 
+    /**
+     * @param nodes
+     * @param type
+     * @param id
+     * @param target
+     */
+    private void addModelBrlndDependency(Set<Node> nodes, Profile.Type type, String id, Document target){
+        for (Node node : nodes) {
+            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(type.toString()));
+            extEq.setAttribute("rdf:resource", id);
+            node.appendChild(extEq);
+        }
+    }
+
+    /**
+     * @param node
+     * @param type
+     * @param id
+     * @param target
+     */
+    private void addModelBrlndDependency(Node node, Profile.Type type, String id, Document target){
+            Element extEq = target.createElement("brlnd:ModelObject."+brlndType.get(type.toString()));
+            extEq.setAttribute("rdf:resource", id);
+            node.appendChild(extEq);
+    }
+
+    /**
+     * @param EQ
+     * @param TP
+     * @param SSH
+     * @param SV
+     * @param EQBD
+     * @param TPBD
+     * @param target
+     * @return
+     */
+    private Set<Node> addCimProfileExtensions(Profile EQ, Profile TP, Profile SSH, Profile SV, Profile EQBD, Profile TPBD, Document target){
+        Set<String> cimprofilesuris = new HashSet<>();
+        cimprofilesuris.addAll(EQ.modelProfile);
+        cimprofilesuris.addAll(TP.modelProfile);
+        cimprofilesuris.addAll(SSH.modelProfile);
+        cimprofilesuris.addAll(SV.modelProfile);
+        cimprofilesuris.addAll(EQBD.modelProfile);
+        cimprofilesuris.addAll(TPBD.modelProfile);
+        Set<Node> nodes = new HashSet<>();
+        for (String s : cimprofilesuris) {
+            if(bdExtensions.CimProfiles.containsKey(s)){
+                nodes.add(addNode(target, bdExtensions.CimProfiles.get(s)));
+            }
+            else if (StringUtils.contains(s,"/EquipmentBoundary/")){
+                nodes.add(addNode(target, bdExtensions.CimProfiles.get("http://iec.ch/TC57/2013/61970-452/EquipmentBoundary/3")));
+            }
+        }
+        return nodes;
+    }
+
+    /**
+     * @param business
+     * @param target
+     * @return
+     */
+    private Set<Node> addProcessTypeExtension(String business, Document target){
+        Set<Node> nodes = new HashSet<>();
+        if(bdExtensions.ProcessType.containsKey(business)){
+            nodes.add(addNode(target,bdExtensions.ProcessType.get(business)));
+        }
+        else{
+            for(String s : bdExtensions.ProcessType.keySet()){
+                nodes.add(addNode(target,bdExtensions.ProcessType.get(s)));
+            }
+        }
+        return nodes;
+    }
+
+    /**
+     * @param controlAreas
+     * @param target
+     * @param eqids
+     * @return
+     */
+    private Set<Node> addGeographicalRegionExtension(Set<String> controlAreas, Document target, HashMap<String,Node> eqids){
+        Set<Node> nodes = new HashSet<>();
+        for (String controlArea : controlAreas) {
+            if(bdExtensions.GeographicalRegionEIC.containsKey(controlArea)){
+                nodes.add(addNode(target,bdExtensions.GeographicalRegionEIC.get(controlArea)));
+                Node myGeo = bdExtensions.GeographicalRegionEIC.get(controlArea);
+                String modelingAuthority = null;
+                if(myGeo.hasChildNodes()){
+                    for (Node node : convertToArray(myGeo.getChildNodes())) {
+                        if(StringUtils.contains(node.getLocalName(),"MARegion.ModelingAuthority")){
+                            modelingAuthority = node.getAttributes().item(0).getNodeValue().replace("#","");
+                        }
+                    }
+                }
+
+                if(bdExtensions.ModelingAuthority.containsKey(modelingAuthority)){
+                    nodes.add(addNode(target,bdExtensions.ModelingAuthority.get(modelingAuthority)));
+                }
+
+            }
+        }
+
+
+        for (String s : bdExtensions.GeographicalRegionIds.keySet()) {
+            if(eqids.containsKey(s)){
+                String modelingAuthority = null;
+                if(bdExtensions.GeographicalRegionIds.get(s).hasChildNodes()){
+                    for (Node node : convertToArray(bdExtensions.GeographicalRegionIds.get(s).getChildNodes())) {
+                        eqids.get(s).appendChild(target.importNode(node,true));
+                        if(StringUtils.contains(node.getLocalName(),"MARegion.ModelingAuthority")){
+                            modelingAuthority = node.getAttributes().item(0).getNodeValue().replace("#","");
+                        }
+                    }
+                    nodes.add(eqids.get(s));
+                    if(bdExtensions.ModelingAuthority.containsKey(modelingAuthority)){
+                        nodes.add(addNode(target,bdExtensions.ModelingAuthority.get(modelingAuthority)));
+                    }
+                }
+            }
+        }
+
+        return nodes;
+
+    }
+
+
+    /**
+     * @param target
+     * @param eqids
+     * @return
+     */
+    private Set<Node> addGenericExtensions(Document target, HashMap<String,Node> eqids){
+        Set<Node> nodes = new HashSet<>();
+        for(String s: bdExtensions.ToBeAdded.keySet()){
+            if(eqids.containsKey(s)){
+                if(bdExtensions.ToBeAdded.get(s).hasChildNodes()){
+                    for (Node node : convertToArray(bdExtensions.ToBeAdded.get(s).getChildNodes())) {
+                        eqids.get(s).appendChild(target.importNode(node,true));
+                    }
+                    nodes.add(eqids.get(s));
+                }
+            }
+            else {
+                nodes.add(addNode(target,bdExtensions.ToBeAdded.get(s)));
+            }
+        }
+        return nodes;
+    }
+
+
+    /**
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     */
+    private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
+        Node[] bdExts = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("bdExtensions"))));
+
+        for (Node bdExt : bdExts) {
+            if(!StringUtils.isEmpty(bdExt.getLocalName())){
+                if(StringUtils.contains(bdExt.getLocalName(),"CimProfile")){
+                    if(bdExt.hasChildNodes()){
+                        for (Node node : convertToArray(bdExt.getChildNodes())) {
+                            if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"CimProfile.uri")){
+                                bdExtensions.CimProfiles.put(node.getTextContent(),bdExt);
+                            }
+                        }
+                    }
+                }
+                else if(StringUtils.contains(bdExt.getLocalName(),"ProcessType")){
+                    if(bdExt.hasChildNodes()){
+                        for (Node node : convertToArray(bdExt.getChildNodes())) {
+                            if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"IdentifiedObject.name")){
+                                bdExtensions.ProcessType.put(node.getTextContent(),bdExt);
+                            }
+                        }
+                    }
+                }
+
+                else if(StringUtils.contains(bdExt.getLocalName(),"ModelingAuthority")){
+                    bdExtensions.ModelingAuthority.put(bdExt.getAttributes().item(0).getNodeValue(),bdExt);
+                }
+
+                else if(StringUtils.contains(bdExt.getLocalName(),"GeographicalRegion")){
+                    bdExtensions.GeographicalRegionIds.put(bdExt.getAttributes().item(0).getNodeValue(),bdExt);
+                    if(bdExt.hasChildNodes()){
+                        for (Node node : convertToArray(bdExt.getChildNodes())) {
+                            if(!StringUtils.isEmpty(node.getLocalName()) && StringUtils.contains(node.getLocalName(),"IdentifiedObject.energyIdentCodeEic")){
+                                bdExtensions.GeographicalRegionEIC.put(node.getTextContent(),bdExt);
+                            }
+                        }
+                    }
+                }
+
+                else{
+                    bdExtensions.ToBeAdded.put(bdExt.getAttributes().item(0).getNodeValue(), bdExt);
+                }
+
+            }
+        }
+    }
+
+
+    /**
+     * @param target
+     * @return
+     * @throws URISyntaxException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     * @throws IOException
+     * @throws TransformerException
+     */
     private  Document createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
@@ -502,6 +696,7 @@ class XMITransformation {
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = builderFactory.newDocumentBuilder();
         Document xmi = builder.newDocument();
+
 
         HashMap<String,Integer> numbering = new HashMap<>();
         Node[] objects = convertToArray(target.getDocumentElement().getChildNodes());
@@ -517,10 +712,13 @@ class XMITransformation {
         Node[] lines = convertToArray(target.getDocumentElement().getChildNodes());
         Node[] basics = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("basic_model"))));
 
-        xmi.appendChild(xmi.createElementNS("http://Model/1.0/CGMES", "CGMES:DataSet"));
+
+
+        xmi.appendChild(xmi.createElementNS("http://Model/1.0/CGMES/IEC61970/Base/MetaData", "MetaData:DataSet"));
         for(String s : authExt.keySet()){
             xmi.getDocumentElement().setAttributeNS(authExt.get("xmlns"),"xmlns:"+s,authExt.get(s) );
         }
+
 
         for(String s: xmiXmlns.keySet()){
             if(s.contains("schemaLocation"))
@@ -540,12 +738,15 @@ class XMITransformation {
         xmi.getDocumentElement().setAttribute("isEQoperation", Boolean.toString(isNb));
         xmi.getDocumentElement().setAttribute("isEQshortCircuit", Boolean.toString(isShortCircuit));
 
+
+
         for (Node basic : basics) {
             if(!StringUtils.isEmpty(basic.getLocalName())){
                 xmi.getDocumentElement().appendChild(xmi.importNode(basic,true));
 
             }
         }
+
 
         for (Node line : lines) {
             if(!StringUtils.isEmpty(line.getLocalName())){
@@ -597,10 +798,16 @@ class XMITransformation {
         }
 
         lines = null;
-
         return xmi;
     }
 
+    /**
+     * @return
+     * @throws IOException
+     * @throws URISyntaxException
+     * @throws ParserConfigurationException
+     * @throws SAXException
+     */
     private HashMap<String, String> parseEcoreXmi() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
         HashMap<String,String> sub = new HashMap<>();
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
@@ -623,6 +830,8 @@ class XMITransformation {
 
         }
 
+
+
         String schema = " ";
         for(String s: xmiXmlns.keySet()){
             schema+= xmiXmlns.get(s);
@@ -632,7 +841,6 @@ class XMITransformation {
         xmiXmlns.put("xsi","http://www.w3.org/2001/XMLSchema-instance");
         xmiXmlns.put("ecore","http://www.eclipse.org/emf/2002/Ecore");
         xmiXmlns.put("uml","http://www.omg.org/spec/UML/20131001");
-
 
         xmiXmlns.put("schemaLocation", schema);
 
@@ -650,6 +858,7 @@ class XMITransformation {
         authExt.put("md","http://iec.ch/TC57/61970-552/ModelDescription/1#");
         authExt.put("xmlns","http://www.w3.org/2000/xmlns/");
         authExt.put("brlnd","http://brolunda.com/ecore-converter#");
+        authExt.put("cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
     }
 
     /**
@@ -706,6 +915,7 @@ class XMITransformation {
 
 
         root.setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
+        root.setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
     }
 
     /**
@@ -724,6 +934,11 @@ class XMITransformation {
         return copy;
     }
 
+    /**
+     * @param doc
+     * @param name
+     * @throws TransformerException
+     */
     private static void printDocument(Document doc, String name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
@@ -731,24 +946,14 @@ class XMITransformation {
         transformer.setOutputProperty(OutputKeys.METHOD, "xml");
         transformer.setOutputProperty(OutputKeys.INDENT, "yes");
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
 
 
         transformer.transform(new DOMSource(doc),new StreamResult(new File("/home/chiaramellomar/EMF_meetings/ocl_validator/models/"+name)));
     }
 
-    private StreamResult convertToStream(Document doc) throws TransformerException {
-        TransformerFactory tf = TransformerFactory.newInstance();
-        Transformer transformer = tf.newTransformer();
-        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
-        transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-        StreamResult result = new StreamResult(new ByteArrayOutputStream());
-        transformer.transform(new DOMSource(doc), result);
-        return result;
-    }
 
     /**
      *
@@ -843,20 +1048,25 @@ class XMITransformation {
      * @throws IOException
      * @throws TransformerException
      */
-    private void addObject(Document doc, NodeList nodeList, String s, boolean begin) throws IOException, TransformerException {
+    private HashMap<String,Node> addObject(Document doc, NodeList nodeList, String s, boolean begin) throws IOException, TransformerException {
         NodeList nodes = nodeList.item(0).getOwnerDocument().getElementsByTagName(s);
+        HashMap<String,Node> addedNodes = new HashMap<>();
         for(int i=0; i<nodes.getLength();i++){
             if(nodes.item(i).getLocalName()!=null){
+                Node node;
 
                 if(begin) {
-                    doc.getDocumentElement().insertBefore(doc.importNode(nodes.item(i), true), doc.getDocumentElement().getChildNodes().item(0));
+                   node= doc.getDocumentElement().insertBefore(doc.importNode(nodes.item(i), true), doc.getDocumentElement().getChildNodes().item(0));
                 }
                 else{
-                    doc.getDocumentElement().appendChild(doc.importNode(nodes.item(i),true));
+                    node= doc.getDocumentElement().appendChild(doc.importNode(nodes.item(i),true));
                 }
-            }
-        }
 
+                addedNodes.put(node.getAttributes().item(0).getNodeValue(), node);
+            }
+
+        }
+        return addedNodes;
     }
 
 
@@ -915,7 +1125,6 @@ class XMITransformation {
         Node modelPart = doc.createElement("brlnd:Model.modelPart");
         Node fileVersion = doc.createElement("brlnd:Model.fileVersion");
         Node sourcingRSC = doc.createElement("brlnd:Model.sourcingRSC");
-        Node syncArea = doc.createElement("brlnd:Model.synchronousArea");
 
         fullmodel.item(0).appendChild(region);
         fullmodel.item(0).appendChild(bp);
@@ -946,7 +1155,7 @@ class XMITransformation {
         fullmodel.item(0).appendChild(fileVersion);
 
         fullmodel.item(0).appendChild(sourcingRSC);
-        fullmodel.item(0).appendChild(syncArea);
+
     }
 
     /**
@@ -1054,7 +1263,13 @@ class XMITransformation {
         return name;
     }
 
-
+    /**
+     *
+     * @param nodeList
+     * @param ToBeReplaced
+     * @param defaultBDId
+     * @return
+     */
     private NodeList correctDeps(NodeList nodeList, List<String> ToBeReplaced, String defaultBDId){
         NodeList dep = nodeList.item(0).getOwnerDocument().getElementsByTagName("md:Model.DependentOn");
         for (int i =0; i<dep.getLength();i++){

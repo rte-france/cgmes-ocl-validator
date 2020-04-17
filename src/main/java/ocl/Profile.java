@@ -15,13 +15,15 @@ class Profile{
     File file;
     String xml_name;
     List<String> DepToBeReplaced= new ArrayList<>();
+    List<String> modelProfile = new ArrayList<>();
 
-    Profile(Type type, String id, List<String> deps, File file, String xmlName){
+    Profile(Type type, String id, List<String> deps, File file, String xmlName, List<String> modelProfile){
         this.type = type;
         this.id = id;
         this.depOn = deps;
         this.file = file;
         this.xml_name = xmlName;
+        this.modelProfile=modelProfile;
     }
 
     /**

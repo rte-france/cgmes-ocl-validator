@@ -66,8 +66,15 @@ public class IGM_CGM_preparation {
                     UserHandler handler = new UserHandler();
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
-                    saxParser.parse(xmlStream, handler);
-                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
+                    try{
+                        saxParser.parse(xmlStream, handler);
+                    }catch (DoneParsingException e ){
+
+                    }catch (SAXException e ){
+                        LOGGER.severe("Problem with header processing when reordering");
+                        throw new RuntimeException(e);
+                    }
+                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(), handler.modelProfile);
                     switch (profile.type) {
                         case SV:
                             SVProfiles.add(profile);
@@ -238,9 +245,16 @@ public class IGM_CGM_preparation {
                     UserHandler handler = new UserHandler();
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
-                    saxParser.parse( xmlStream, handler );
+                    try {
+                        saxParser.parse(xmlStream, handler);
+                    }catch (DoneParsingException e){
+
+                    }catch (SAXException e){
+                        LOGGER.severe("Problem with header processing when reordering");
+                        throw new RuntimeException(e);
+                    }
                     if(Profile.getType(entry.getName()) == Profile.Type.other){
-                        Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName());
+                        Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(),handler.modelProfile);
                         defaultBDs.add(profile);
                         if(handler.my_depOn.size()!=0){
                             defaultBDIds.add(handler.my_depOn.get(0));
@@ -272,16 +286,40 @@ public class IGM_CGM_preparation {
     {
         String my_id;
         List<String> my_depOn = new ArrayList<String>();
+        List<String> modelProfile = new ArrayList<>();
+        boolean ismodelProfile = false;
 
         @Override
         public void startElement(String namespaceURI, String localName, String qname, Attributes atts){
             if(qname.equalsIgnoreCase("md:FullModel")){
                 my_id=atts.getValue("rdf:about");
             }
-            if(qname.equalsIgnoreCase("md:Model.DependentOn")){
+            else if(qname.equalsIgnoreCase("md:Model.DependentOn")){
                 my_depOn.add(atts.getValue("rdf:resource"));
             }
+            else if(qname.equalsIgnoreCase("md:Model.profile")){
+                ismodelProfile = true;
+            }
         }
+
+        @Override
+        public void characters(char[] ch, int start, int length) {
+            if (ismodelProfile) {
+                modelProfile.add(new String(ch, start, length));
+                ismodelProfile=false;
+            }
+        }
+
+        @Override
+        public void endElement(String uri, String localName, String qName) throws SAXException {
+            if (qName.equalsIgnoreCase("md:FullModel")) {
+                throw new DoneParsingException();
+            }
+        }
+
+    }
+
+    static class DoneParsingException extends SAXException{
 
     }
 
