@@ -441,9 +441,7 @@ class XMITransformation {
                             }
                         }
                         Node my_node = addNode(target, sVnode);
-                        if(sVnode.getLocalName().contains("TopologicalIsland") || sVnode.getLocalName().contains("SvStatus")){
-                            addModelBrlndDependency(my_node,SV.type,SV.id,target);
-                        }
+                        addModelBrlndDependency(my_node,SV.type,SV.id,target);
 
                     }
                 }
@@ -470,7 +468,6 @@ class XMITransformation {
         SSHnodes = null;
         voltageLevels_=null;
         transf_=null;
-
        return  target;
 
     }
@@ -545,6 +542,7 @@ class XMITransformation {
             }
         }
 
+
         for (String s : bdExtensions.GeographicalRegionIds.keySet()) {
             if(eqids.containsKey(s)){
                 String modelingAuthority = null;
@@ -562,6 +560,7 @@ class XMITransformation {
                 }
             }
         }
+
         return nodes;
 
     }
@@ -743,7 +742,6 @@ class XMITransformation {
         }
 
         lines = null;
-
         return xmi;
     }
 
