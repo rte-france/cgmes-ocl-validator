@@ -62,7 +62,7 @@ public class RuleDescriptionParser {
 
             if (nNode.getNodeType() == Node.ELEMENT_NODE) {
                 Element eElement = (Element) nNode;
-                rd.setName(eElement.getElementsByTagName("cgmbp:IdentifiedDescription.name")
+                rd.setName(eElement.getElementsByTagName("cgmbp:UMLRestrictionRule.name")
                         .item(0)
                         .getTextContent());
                 rd.setSeverity(eElement.getElementsByTagName("cgmbp:UMLRestrictionRule.severity")
@@ -71,7 +71,7 @@ public class RuleDescriptionParser {
                 rd.setLevel(new Integer(eElement.getElementsByTagName("cgmbp:UMLRestrictionRule.level")
                         .item(0)
                         .getTextContent()));
-                rd.setDescription(eElement.getElementsByTagName("cgmbp:IdentifiedDescription.description")
+                rd.setDescription(eElement.getElementsByTagName("cgmbp:UMLRestrictionRule.description")
                         .item(0)
                         .getTextContent());
                 Node nm = eElement.getElementsByTagName("cgmbp:UMLRestrictionRule.message")
