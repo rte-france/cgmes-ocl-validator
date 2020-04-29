@@ -56,7 +56,7 @@ The installation package contains has the following structure:
 
 - copy the input IGMS to be validated into the directory `inputs`. The format has to 
 be the following: each xml profile instance file has to be in a separate zip file 
-- *(optional)* copy in the directory `config` a CGMES boundary set (same format: each 
+- copy in the directory `config` a CGMES boundary set (same format: each 
 instance as a separate zip). This boundary set will be substituted to the one defined
 in the IGM if this is not the same. This process is similar to what OPDE does.
 - **important**: required validation rules are specified in a separare configuration files, it has to be stored into the `config` directory.
