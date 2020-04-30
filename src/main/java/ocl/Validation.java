@@ -183,25 +183,35 @@ public class Validation {
                                 level,
                                 object.eClass().getName(),
                                 (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                                name
+                                name, null
                         ));
                     }
                 }
             } else {
+                // it is for sure a problem of cardinality, we set it by default to IncorrectAttributeOrRoleCard,
+                // later on we check anyway if it exists in UMLRestrictionRules file
                 msg = childDiagnostic.getMessage();
                 matcher = pattern.matcher(msg);
                 while (matcher.find()) {
                     String ruleName = matcher.group(1);
                     if (!excludeRuleName(ruleName)) {
+                        if(rules.get(ruleName)==null){
+                            ruleName = "IncorrectAttributeOrRoleCard";
+                        }
                         String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
                         int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-                        results.add(new EvaluationResult(severity,
+                        EvaluationResult evaluationResult = new EvaluationResult(severity,
                                 ruleName,
                                 level,
                                 object.eClass().getName(),
                                 (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                                null
-                        ));
+                                null, null
+                        );
+                        if(rules.get(ruleName)!=null){
+                            evaluationResult.setSpecificMessage(matcher.group(1)+" of "+object.eClass().getName()+" is required.");
+                        }
+                        results.add(evaluationResult);
+
                     }
                 }
             }
@@ -230,7 +240,6 @@ public class Validation {
                 ZipEntry entry = entries.nextElement();
                 InputStream xmlStream = zip.getInputStream(entry);
                 List<EvaluationResult> res = validation.getErrors(validation.evaluate(xmlStream,entry.getName()), rules);
-
                 OutputStream zipout = Files.newOutputStream(Paths.get(file.getParentFile().getAbsolutePath() + File.separator +entry.getName().replace("xmi","json") +".zip"));
                 ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
                 String json = new Gson().toJson(res);
@@ -241,7 +250,6 @@ public class Validation {
                 zipOutputStream.close();
                 file.delete();
                 res=null;
-
                 xmlStream.close();
 
             }
