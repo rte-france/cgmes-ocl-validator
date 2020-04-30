@@ -393,40 +393,6 @@ class XMITransformation {
         }
 
 
-        for(String t: TPs2add.keySet()){
-            String bv;
-            if(BDObjects.containsKey(t)){
-                bv = BDObjects.get(t).BVn.getAttributes().item(0).getNodeValue();
-                if(!declaredBV.containsKey(bv)){
-                    addModelBrlndDependency(addNode(target,BDObjects.get(t).BVn),EQ.type,eqbd.id,target);
-                    declaredBV.put(bv,BDObjects.get(t).BVn);
-                }
-
-                addModelBrlndDependency(addNode(target,BDObjects.get(t).TPn),TP.type,tpbd.id,target);
-                addModelBrlndDependency(addNode(target,BDObjects.get(t).EQn), EQ.type,eqbd.id,target);
-                if(isNb || isusingCN) {
-                    Node CnBdAdd = addNode(target,BDObjects.get(t).CNn);
-                    addModelBrlndDependency(CnBdAdd,TP.type,tpbd.id,target);
-                    addModelBrlndDependency(CnBdAdd,EQ.type,eqbd.id,target);
-                }
-
-            }
-            else{
-                addModelBrlndDependency(addNode(target,TPs2add.get(t)), TP.type,TP.id,target);
-                if(TPs2add.get(t).hasChildNodes()){
-                    for (Node child : convertToArray(TPs2add.get(t).getChildNodes())) {
-                        if(!StringUtils.isEmpty(child.getLocalName()) && StringUtils.contains(child.getLocalName(),"BaseVoltage")){
-                            bv = (child.getAttributes().item(0).getNodeValue().replace("#",""));
-                            if(!declaredBV.containsKey(bv)){
-                                Node node1 = target.importNode(BVmap.get(bv),true);
-                                addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
-                                declaredBV.put(bv,node1);
-                            }
-                        }
-                    }
-                }
-            }
-        }
         
 
         Node[] SVnodes = convertToArray(nodeListsv);
@@ -453,6 +419,12 @@ class XMITransformation {
                                     if(child.getParentNode()!=null)
                                         child.getParentNode().removeChild(child);
                                 }
+                                if(!StringUtils.isEmpty(child.getLocalName()) && StringUtils.contains(child.getLocalName(),"TopologicalNode")){
+                                    String ReferredTp=child.getAttributes().item(0).getNodeValue().replace("#","");
+                                    if(!TPs2add.containsKey(ReferredTp)){
+                                        TPs2add.put(ReferredTp,null);
+                                    }
+                                }
                             }
                         }
                         Node my_node = addNode(target, sVnode);
@@ -463,7 +435,44 @@ class XMITransformation {
             }
         }
 
+        for(String t: TPs2add.keySet()){
+            String bv;
+            if(BDObjects.containsKey(t)){
+                bv = BDObjects.get(t).BVn.getAttributes().item(0).getNodeValue();
+                if(!declaredBV.containsKey(bv)){
+                    addModelBrlndDependency(addNode(target,BDObjects.get(t).BVn),EQ.type,eqbd.id,target);
+                    declaredBV.put(bv,BDObjects.get(t).BVn);
+                }
 
+                addModelBrlndDependency(addNode(target,BDObjects.get(t).TPn),TP.type,tpbd.id,target);
+                addModelBrlndDependency(addNode(target,BDObjects.get(t).EQn), EQ.type,eqbd.id,target);
+                if(isNb || isusingCN) {
+                    Node CnBdAdd = addNode(target,BDObjects.get(t).CNn);
+                    addModelBrlndDependency(CnBdAdd,TP.type,tpbd.id,target);
+                    addModelBrlndDependency(CnBdAdd,EQ.type,eqbd.id,target);
+                }
+
+            }
+            else{
+                if(TPs2add.get(t)!=null){
+                    addModelBrlndDependency(addNode(target,TPs2add.get(t)), TP.type,TP.id,target);
+                    if(TPs2add.get(t).hasChildNodes()){
+                        for (Node child : convertToArray(TPs2add.get(t).getChildNodes())) {
+                            if(!StringUtils.isEmpty(child.getLocalName()) && StringUtils.contains(child.getLocalName(),"BaseVoltage")){
+                                bv = (child.getAttributes().item(0).getNodeValue().replace("#",""));
+                                if(!declaredBV.containsKey(bv)){
+                                    Node node1 = target.importNode(BVmap.get(bv),true);
+                                    addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
+                                    declaredBV.put(bv,node1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        
         Set<Node> addExtensions = new HashSet<>();
         addExtensions.addAll(addCimProfileExtensions(EQ,TP,SSH,SV,eqbd,tpbd,target));
         addExtensions.addAll(addProcessTypeExtension(business,target));
