@@ -67,22 +67,28 @@ public class EvaluationResult{
         this.level = level;
     }
 
+    public String getSpecificMessage(){return specificMessage;}
+
+    public void setSpecificMessage(String specificMessage){this.specificMessage=specificMessage;}
+
     private String type;
     private String id;
     private String name;
     private Integer level;
+    private String specificMessage;
 
-    public EvaluationResult(String severity, String rule, Integer level, String type, String id, String name) {
+    public EvaluationResult(String severity, String rule, Integer level, String type, String id, String name, String specificMessage) {
         this.severity = severity;
         this.rule = rule;
         this.type = type;
         this.id = id;
         this.name = name;
         this.level = level;
+        this.specificMessage=specificMessage;
     }
 
     public String toString(){
-        String s = String.format("%-40s %-5s: %-25s %-37s %-30s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"");
+        String s = String.format("%-40s %-5s: %-25s %-37s %-30s %-40s", this.rule, this.level, this.type, (id!=null)?id:"", (name!=null)?name:"", (specificMessage!=null)?specificMessage:"");
         return s;
     }
 

@@ -102,11 +102,13 @@ public class XLSWriter {
                     String name = res.getName();
                     cell.setCellValue(name==null?"":name);
                     cell = row.createCell(colNum++);
-                    String message = res.getName();
+
                     if (rules.get(infringedRule)==null)
                         cell.setCellValue("");
-                    else
-                        cell.setCellValue(rules.get(infringedRule).getMessage());
+                    else {
+                        String message = res.getSpecificMessage()!=null? rules.get(infringedRule).getMessage() + " " + res.getSpecificMessage():rules.get(infringedRule).getMessage() ;
+                        cell.setCellValue(message);
+                    }
 
                 }
                 sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum-1));
