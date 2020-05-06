@@ -7,7 +7,9 @@ import ocl.util.IOUtils;
 import ocl.util.RuleDescription;
 import ocl.util.RuleDescriptionParser;
 import org.eclipse.emf.common.util.Diagnostic;
+import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
+import org.eclipse.emf.ecore.EAnnotation;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -43,6 +45,7 @@ public class Validation {
     private static URI modelURI;
     private static Resource model;
     private static EPackage p;
+    private static List<EPackage> myPList = new ArrayList<>();
 
     private static Logger LOGGER = null;
     static {
@@ -105,12 +108,13 @@ public class Validation {
 
 
         List<EPackage> pList = getPackages(ecoreResource);
-        p = pList.get(0);
+        myPList = pList;
+        //p = pList.get(0);
 
-        resourceSet.getPackageRegistry().put(p.getNsURI(), p);
+       // resourceSet.getPackageRegistry().put(p.getNsURI(), p);
 
-        model = resourceSet.getResource(modelURI, true);
-        model.unload();
+        //model = resourceSet.getResource(modelURI, true);
+        //model.unload();
     }
 
 
@@ -121,13 +125,51 @@ public class Validation {
                 if (obj instanceof EPackage) {
                     pList.add((EPackage)obj);
                 }
+        TreeIterator<EObject> test = r.getAllContents();
+        while(test.hasNext()){
+            EObject t = test.next();
+            if(t instanceof EPackage)
+                pList.add((EPackage)t);
+        }
         return pList;
+    }
+
+  /*  public static void fixExtendedMetaData(EPackage ePackage)
+    {
+        for (Iterator i = ePackage.eAllContents(); i.hasNext(); )
+        {
+            Object o = i.next();
+            if (o instanceof EAnnotation)
+            {
+                ((EAnnotation)o).getDetails().get("");
+
+            }
+        }
+    }*/
+
+    public static ResourceSet createResourceSet(){
+
+        ResourceSet resourceSet = new ResourceSetImpl();
+        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
+        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
+
+        for(EPackage ePackage : myPList){
+          //  fixExtendedMetaData(ePackage);
+            resourceSet.getPackageRegistry().put(ePackage.getNsURI(),ePackage);
+        }
+
+        return resourceSet;
     }
 
 
     private Diagnostic evaluate(InputStream inputStream, String name){
+
+        ResourceSet resourceSet = createResourceSet();
+
         HashMap<String, Boolean> options = new HashMap<>();
         options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
+        UUID uuid = UUID.randomUUID();
+        Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
         try {
             model.load(inputStream,options);
         } catch (IOException e) {
@@ -140,12 +182,16 @@ public class Validation {
         Diagnostician take = new Diagnostician();
 
         Diagnostic diagnostics;
+        //for(EPackage p : myPList){
+            //fixExtendedMetaData(p);
+            //model.getResourceSet().getPackageRegistry().putIfAbsent(p.getNsURI(),p);
+        //}
 
         diagnostics = take.validate(rootObject);
         LOGGER.info(name + " validated");
 
 
-        model.unload();
+        //model.unload();
         rootObject = null;
         take = null;
         inputStream = null;
