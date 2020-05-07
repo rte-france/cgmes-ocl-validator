@@ -9,7 +9,6 @@ import ocl.util.RuleDescriptionParser;
 import org.eclipse.emf.common.util.Diagnostic;
 import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.EAnnotation;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.resource.Resource;
@@ -42,9 +41,7 @@ public class Validation {
     private static ResourceSet resourceSet;
 
     private static URI mmURI;
-    private static URI modelURI;
-    private static Resource model;
-    private static EPackage p;
+
     private static List<EPackage> myPList = new ArrayList<>();
 
     private static Logger LOGGER = null;
@@ -55,7 +52,7 @@ public class Validation {
         try {
             resourceSet = new ResourceSetImpl();
             HashMap<String, String> configs = getConfig();
-            prepareValidator(configs.get("basic_model"), configs.get("ecore_model"));
+            prepareValidator(configs.get("ecore_model"));
         } catch (IOException | URISyntaxException io){
             io.printStackTrace();
         }
@@ -73,7 +70,6 @@ public class Validation {
         properties.load(config);
         String basic_model = properties.getProperty("basic_model");
         String ecore_model = properties.getProperty("ecore_model");
-        String debug = properties.getProperty("debugMode");
 
         if (basic_model!=null && ecore_model!=null){
             configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
@@ -88,16 +84,14 @@ public class Validation {
         return configs;
     }
 
-    private static void prepareValidator(String basic_model, String ecore_model){
+    private static void prepareValidator(String ecore_model){
         CompleteOCLStandaloneSetup.doSetup();
 
         OCLstdlib.install();
-
         resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
         mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
-        File my_model = new File(basic_model);
-        modelURI = URI.createFileURI(my_model.getAbsolutePath());
+
+
         try {
             ecoreResource = resourceSet.getResource(mmURI, true);
         }
@@ -106,15 +100,8 @@ public class Validation {
             System.exit(0);
         }
 
+        myPList = getPackages(ecoreResource);
 
-        List<EPackage> pList = getPackages(ecoreResource);
-        myPList = pList;
-        //p = pList.get(0);
-
-       // resourceSet.getPackageRegistry().put(p.getNsURI(), p);
-
-        //model = resourceSet.getResource(modelURI, true);
-        //model.unload();
     }
 
 
@@ -134,18 +121,7 @@ public class Validation {
         return pList;
     }
 
-  /*  public static void fixExtendedMetaData(EPackage ePackage)
-    {
-        for (Iterator i = ePackage.eAllContents(); i.hasNext(); )
-        {
-            Object o = i.next();
-            if (o instanceof EAnnotation)
-            {
-                ((EAnnotation)o).getDetails().get("");
 
-            }
-        }
-    }*/
 
     public static ResourceSet createResourceSet(){
 
@@ -154,7 +130,6 @@ public class Validation {
         resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
 
         for(EPackage ePackage : myPList){
-          //  fixExtendedMetaData(ePackage);
             resourceSet.getPackageRegistry().put(ePackage.getNsURI(),ePackage);
         }
 
@@ -182,19 +157,14 @@ public class Validation {
         Diagnostician take = new Diagnostician();
 
         Diagnostic diagnostics;
-        //for(EPackage p : myPList){
-            //fixExtendedMetaData(p);
-            //model.getResourceSet().getPackageRegistry().putIfAbsent(p.getNsURI(),p);
-        //}
 
         diagnostics = take.validate(rootObject);
         LOGGER.info(name + " validated");
 
-
-        //model.unload();
         rootObject = null;
         take = null;
         inputStream = null;
+        resourceSet = null;
 
         return diagnostics;
     }
