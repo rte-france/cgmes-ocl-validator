@@ -7,6 +7,7 @@ import ocl.util.IOUtils;
 import ocl.util.RuleDescription;
 import ocl.util.RuleDescriptionParser;
 import org.eclipse.emf.common.util.Diagnostic;
+import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.EPackage;
@@ -40,9 +41,8 @@ public class Validation {
     private static ResourceSet resourceSet;
 
     private static URI mmURI;
-    private static URI modelURI;
-    private static Resource model;
-    private static EPackage p;
+
+    private static List<EPackage> myPList = new ArrayList<>();
 
     private static Logger LOGGER = null;
     static {
@@ -52,7 +52,7 @@ public class Validation {
         try {
             resourceSet = new ResourceSetImpl();
             HashMap<String, String> configs = getConfig();
-            prepareValidator(configs.get("basic_model"), configs.get("ecore_model"));
+            prepareValidator(configs.get("ecore_model"));
         } catch (IOException | URISyntaxException io){
             io.printStackTrace();
         }
@@ -70,7 +70,6 @@ public class Validation {
         properties.load(config);
         String basic_model = properties.getProperty("basic_model");
         String ecore_model = properties.getProperty("ecore_model");
-        String debug = properties.getProperty("debugMode");
 
         if (basic_model!=null && ecore_model!=null){
             configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
@@ -85,16 +84,14 @@ public class Validation {
         return configs;
     }
 
-    private static void prepareValidator(String basic_model, String ecore_model){
+    private static void prepareValidator(String ecore_model){
         CompleteOCLStandaloneSetup.doSetup();
 
         OCLstdlib.install();
-
         resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
         mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
-        File my_model = new File(basic_model);
-        modelURI = URI.createFileURI(my_model.getAbsolutePath());
+
+
         try {
             ecoreResource = resourceSet.getResource(mmURI, true);
         }
@@ -103,14 +100,8 @@ public class Validation {
             System.exit(0);
         }
 
+        myPList = getPackages(ecoreResource);
 
-        List<EPackage> pList = getPackages(ecoreResource);
-        p = pList.get(0);
-
-        resourceSet.getPackageRegistry().put(p.getNsURI(), p);
-
-        model = resourceSet.getResource(modelURI, true);
-        model.unload();
     }
 
 
@@ -121,13 +112,39 @@ public class Validation {
                 if (obj instanceof EPackage) {
                     pList.add((EPackage)obj);
                 }
+        TreeIterator<EObject> test = r.getAllContents();
+        while(test.hasNext()){
+            EObject t = test.next();
+            if(t instanceof EPackage)
+                pList.add((EPackage)t);
+        }
         return pList;
     }
 
 
+
+    public static ResourceSet createResourceSet(){
+
+        ResourceSet resourceSet = new ResourceSetImpl();
+        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
+        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
+
+        for(EPackage ePackage : myPList){
+            resourceSet.getPackageRegistry().put(ePackage.getNsURI(),ePackage);
+        }
+
+        return resourceSet;
+    }
+
+
     private Diagnostic evaluate(InputStream inputStream, String name){
+
+        ResourceSet resourceSet = createResourceSet();
+
         HashMap<String, Boolean> options = new HashMap<>();
         options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
+        UUID uuid = UUID.randomUUID();
+        Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
         try {
             model.load(inputStream,options);
         } catch (IOException e) {
@@ -144,11 +161,10 @@ public class Validation {
         diagnostics = take.validate(rootObject);
         LOGGER.info(name + " validated");
 
-
-        model.unload();
         rootObject = null;
         take = null;
         inputStream = null;
+        resourceSet = null;
 
         return diagnostics;
     }

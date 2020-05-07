@@ -151,7 +151,6 @@ class XMITransformation {
                         }
                     }
                     Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
-                    LOGGER.info("Merged and cleaned:"+key.xml_name);
                     resulting_xmi = createXmi(merged_xml);
                     LOGGER.info("Transformed:"+key.xml_name);
 
