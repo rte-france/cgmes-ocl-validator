@@ -165,7 +165,8 @@ public class OCLEvaluator {
                 gson=null;
 
             }
-            f.delete();
+            zip.close();
+            Files.delete(f.toPath());
         }
 
         return results;
