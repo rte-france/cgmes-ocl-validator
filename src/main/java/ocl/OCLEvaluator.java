@@ -228,6 +228,7 @@ public class OCLEvaluator {
         String classpath = System.getProperty("java.class.path");
         List<String> command = new LinkedList<String>();
         command.add("java");
+        command.add("-Dfile.encoding=UTF-8");
         command.add("-cp");
         command.add(classpath);
         command.add(Validation.class.getName());

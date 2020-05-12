@@ -49,6 +49,7 @@ public class XLSWriter {
 
 
     public void writeResultsPerIGM(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
+        LOGGER.info("Creating reports...");
 
         File excelResults = new File(path.getParentFile()+"/excelResults");
         excelResults.mkdir();
