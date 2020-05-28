@@ -80,7 +80,7 @@ public class OCLEvaluator {
         XMITransformation my_transf = new XMITransformation();
 
         HashMap<String, Document> xmi_list = new HashMap<>();
-
+        cacheDir.mkdirs();
         try {
             my_prep.readZip(where);
             LOGGER.info("Reordering done!");
@@ -101,7 +101,7 @@ public class OCLEvaluator {
 
 
         List<String> files = new ArrayList<>();
-        cacheDir.mkdirs();
+
 
         LOGGER.info("Validator ready");
 
@@ -313,7 +313,7 @@ public class OCLEvaluator {
      * @return
      * @throws IOException
      */
-    static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
+    public static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
         InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+File.separator+"config.properties");
         Properties properties = new Properties();
@@ -350,9 +350,10 @@ public class OCLEvaluator {
 
         if(cacheDir_!=null ){
             try{
+                configs.put("cacheDir", IOUtils.resolveEnvVars(cacheDir_)+File.separator+"cache");
                 cacheDir = new File(IOUtils.resolveEnvVars(cacheDir_)+File.separator+"cache");
             }catch (Exception e){
-
+                configs.put("cacheDir",where.getAbsolutePath()+File.separator+"/cache" );
                 cacheDir= new File(where.getAbsolutePath()+File.separator+"/cache");
             }
 
@@ -418,8 +419,9 @@ public class OCLEvaluator {
             // Read rule details
             RuleDescriptionParser parser = new RuleDescriptionParser();
             HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
-
+            getConfig();
             OCLEvaluator evaluator = new OCLEvaluator();
+
             if(debugMode)
                 LOGGER.info("Validator running in debug mode");
             Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(where);
@@ -432,7 +434,7 @@ public class OCLEvaluator {
 
             evaluator.cleanCache();
 
-        } catch (ParserConfigurationException | IOException | SAXException e){
+        } catch (ParserConfigurationException | IOException | SAXException | URISyntaxException e){
             e.printStackTrace();
             System.exit(-1);
         }

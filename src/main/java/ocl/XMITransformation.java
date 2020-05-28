@@ -14,6 +14,7 @@
  **/
 package ocl;
 
+import ocl.util.CheckXMLConsistency;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.*;
 
@@ -150,11 +151,20 @@ class XMITransformation {
                                 break;
                         }
                     }
-                    Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
-                    resulting_xmi = createXmi(merged_xml);
-                    LOGGER.info("Transformed:"+key.xml_name);
+                    CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(EQ,TP,SSH,key, sv_sn.get(0));
 
-                    xmi_map.put(sv_sn.get(0),resulting_xmi);
+                    if(!xmlConsistency.isExcluded()){
+                        Document merged_xml = createMerge(EQBD,TPBD, getBusinessProcess(key.xml_name), key, EQ, SSH, TP,defaultBDIds);
+                        resulting_xmi = createXmi(merged_xml);
+                        LOGGER.info("Transformed:"+key.xml_name);
+
+                        xmi_map.put(sv_sn.get(0),resulting_xmi);
+                    }
+                    else{
+                        LOGGER.info("Xmi not created for "+key.xml_name+". Probably basic xml/rdf consistency is broken.");
+                    }
+
+
 
 
             } catch (Exception e){
@@ -220,6 +230,8 @@ class XMITransformation {
         NodeList nodeList = document.getDocumentElement().getChildNodes();
         return nodeList;
     }
+
+
 
     /**
      *
