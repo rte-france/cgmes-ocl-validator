@@ -93,7 +93,8 @@ public class CheckXMLConsistency {
             );
             results.add(evaluationResult);
         }
-        writeJsonResults(results);
+        if(results.size()!=0)
+            writeJsonResults(results);
     }
 
     /**
