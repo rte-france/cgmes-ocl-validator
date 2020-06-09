@@ -4,18 +4,18 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-class Profile{
-    enum Type{
+public class Profile{
+    public enum Type{
         EQ, TP, SSH, SV, other
     }
 
-    Type type;
-    String id;
-    List<String> depOn= new ArrayList<>();
-    File file;
-    String xml_name;
-    List<String> DepToBeReplaced= new ArrayList<>();
-    List<String> modelProfile = new ArrayList<>();
+    public Type type;
+    public String id;
+    public List<String> depOn= new ArrayList<>();
+    public File file;
+    public String xml_name;
+    public List<String> DepToBeReplaced= new ArrayList<>();
+    public List<String> modelProfile = new ArrayList<>();
 
     Profile(Type type, String id, List<String> deps, File file, String xmlName, List<String> modelProfile){
         this.type = type;
