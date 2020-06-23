@@ -891,6 +891,7 @@ class XMITransformation {
         authExt.put("xmlns","http://www.w3.org/2000/xmlns/");
         authExt.put("brlnd","http://brolunda.com/ecore-converter#");
         authExt.put("cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
+        authExt.put("qodc","https://www.entsoe.eu/CGMES2_4_15/QoCDC/3/2");
     }
 
     /**
