@@ -13,6 +13,8 @@
  *       Authors: Marco Chiaramello, Jerome Picault
  **/
 package ocl;
+import ocl.service.util.XGMPreparationUtils;
+import ocl.util.DependencyHandler;
 import ocl.util.IOUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
@@ -63,18 +65,18 @@ public class IGM_CGM_preparation {
             entries = zip.entries();
             if (numberEntry == 1){
                 while (entries.hasMoreElements()) {
-                    UserHandler handler = new UserHandler();
+                    DependencyHandler handler = new DependencyHandler();
                     ZipEntry entry = entries.nextElement();
                     InputStream xmlStream = zip.getInputStream(entry);
                     try{
                         saxParser.parse(xmlStream, handler);
-                    }catch (DoneParsingException e ){
+                    }catch (DependencyHandler.DoneParsingException e ){
 
                     }catch (SAXException e ){
                         LOGGER.severe("Problem with header processing when reordering");
                         throw new RuntimeException(e);
                     }
-                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(), handler.modelProfile);
+                    Profile profile = new Profile(Profile.getType(entry.getName()), handler.getMyId(), handler.getMyDepOn(), file, entry.getName(), handler.getModelProfile());
                     switch (profile.type) {
                         case SV:
                             SVProfiles.add(profile);
@@ -84,7 +86,8 @@ public class IGM_CGM_preparation {
                         case SSH:
                             otherProfiles.add(profile);
                             break;
-                        case other:
+                        case EQBD:
+                        case TPBD:
                             BDProfiles.add(profile);
                     }
 
@@ -143,7 +146,7 @@ public class IGM_CGM_preparation {
                     Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.id.equals(eq_dep)).findAny();
                     if(matchingObject.isPresent()){
                         switch (matchingObject.get().type){
-                            case other:
+                            case EQBD:
                                 EQBDs.add(matchingObject.get());
                                 break;
                         }
@@ -158,7 +161,7 @@ public class IGM_CGM_preparation {
                 Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.depOn.equals(eqbd_id)).findAny();
                 if(matchingObject.isPresent()){
                     switch (matchingObject.get().type){
-                        case other:
+                        case TPBD:
                             TPBDs.add(matchingObject.get());
                             break;
                     }
@@ -200,7 +203,8 @@ public class IGM_CGM_preparation {
                     case SSH:
                         NumSSHs++;
                         break;
-                    case other:
+                    case EQBD:
+                    case TPBD:
                         NumBDs++;
                         break;
                 }
@@ -210,116 +214,12 @@ public class IGM_CGM_preparation {
                 it.remove();
             } else if(NumBDs<2){
                 if (!BDParsed){
-                    defaultBDs= getDefaultBds();
+                    defaultBDs= XGMPreparationUtils.getDefaultBds();
                     BDParsed = true;
                 }
                 entry.getValue().addAll(defaultBDs);
             }
         }
-
-    }
-
-    /**
-     *
-     * @return
-     * @throws IOException
-     * @throws ParserConfigurationException
-     * @throws SAXException
-     */
-    private List<Profile> getDefaultBds() throws IOException, ParserConfigurationException, SAXException {
-        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG") + File.separator + "config.properties");
-        Properties properties = new Properties();
-        properties.load(config);
-        List<Profile> defaultBDs = new ArrayList<>();
-        if (properties.getProperty("default_bd") != null) {
-            SAXParserFactory factory = SAXParserFactory.newInstance();
-            factory.setNamespaceAware(true);
-            SAXParser saxParser = factory.newSAXParser();
-            File bds = new File(IOUtils.resolveEnvVars(properties.getProperty("default_bd")));
-            FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
-            File[] listOfFiles = bds.listFiles(fileFilter);
-            for (File file : listOfFiles) {
-                ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
-                Enumeration<? extends ZipEntry> entries = zip.entries();
-                while (entries.hasMoreElements()) {
-                    UserHandler handler = new UserHandler();
-                    ZipEntry entry = entries.nextElement();
-                    InputStream xmlStream = zip.getInputStream(entry);
-                    try {
-                        saxParser.parse(xmlStream, handler);
-                    }catch (DoneParsingException e){
-
-                    }catch (SAXException e){
-                        LOGGER.severe("Problem with header processing when reordering");
-                        throw new RuntimeException(e);
-                    }
-                    if(Profile.getType(entry.getName()) == Profile.Type.other){
-                        Profile profile = new Profile(Profile.getType(entry.getName()), handler.my_id, handler.my_depOn, file, entry.getName(),handler.modelProfile);
-                        defaultBDs.add(profile);
-                        if(handler.my_depOn.size()!=0){
-                            defaultBDIds.add(handler.my_depOn.get(0));
-                            defaultBDIds.add(handler.my_id);
-                        }
-                    } else{
-                        LOGGER.severe("Impossible to add default boundaries!");
-                        System.exit(0);
-                    }
-                }
-
-            }
-            if(defaultBDIds.size()<2){
-                LOGGER.severe("One boundary instance is missing in "+properties.getProperty("default_bd")+": Validation stops!");
-                System.exit(0);
-            }
-        } else {
-            LOGGER.severe("Default boundary location not specified!");
-            System.exit(0);
-        }
-        return defaultBDs;
-    }
-
-
-    /**
-     *
-     */
-    static class UserHandler extends DefaultHandler
-    {
-        String my_id;
-        List<String> my_depOn = new ArrayList<String>();
-        List<String> modelProfile = new ArrayList<>();
-        boolean ismodelProfile = false;
-
-        @Override
-        public void startElement(String namespaceURI, String localName, String qname, Attributes atts){
-            if(qname.equalsIgnoreCase("md:FullModel")){
-                my_id=atts.getValue("rdf:about");
-            }
-            else if(qname.equalsIgnoreCase("md:Model.DependentOn")){
-                my_depOn.add(atts.getValue("rdf:resource"));
-            }
-            else if(qname.equalsIgnoreCase("md:Model.profile")){
-                ismodelProfile = true;
-            }
-        }
-
-        @Override
-        public void characters(char[] ch, int start, int length) {
-            if (ismodelProfile) {
-                modelProfile.add(new String(ch, start, length));
-                ismodelProfile=false;
-            }
-        }
-
-        @Override
-        public void endElement(String uri, String localName, String qName) throws SAXException {
-            if (qName.equalsIgnoreCase("md:FullModel")) {
-                throw new DoneParsingException();
-            }
-        }
-
-    }
-
-    static class DoneParsingException extends SAXException{
 
     }
 

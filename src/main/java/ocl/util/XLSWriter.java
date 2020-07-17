@@ -48,88 +48,95 @@ public class XLSWriter {
     }
 
 
+    public void writeSingleReport(String key, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, File path) {
+        try {
+            XSSFWorkbook workbook = new XSSFWorkbook();
+            XSSFCellStyle redStyle = coloredCell(workbook, Color.RED);
+            XSSFCellStyle orangeStyle = coloredCell(workbook, Color.ORANGE);
+            XSSFSheet sheet = workbook.createSheet(key);
+            int rowNum = 0;
+            Row row = sheet.createRow(rowNum++);
+            int colNum = 0;
+            Cell cell = row.createCell(colNum++);
+            cell.setCellValue("SEVERITY");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("RULE");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("LEVEL");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("OBJECT");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("ID");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("NAME");
+            cell = row.createCell(colNum++);
+            cell.setCellValue("MESSAGE");
+            for (EvaluationResult res : results) {
+                String infringedRule = res.getRule();
+                row = sheet.createRow(rowNum++);
+                colNum = 0;
+                cell = row.createCell(colNum++);
+                String severity = "UNKNOWN";
+                if (rules.get(infringedRule) != null)
+                    severity = rules.get(infringedRule).getSeverity();
+                cell.setCellValue(severity);
+                if (severity.equalsIgnoreCase("ERROR"))
+                    cell.setCellStyle(redStyle);
+                else if (severity.equalsIgnoreCase("WARNING"))
+                    cell.setCellStyle(orangeStyle);
+                cell = row.createCell(colNum++);
+                cell.setCellValue(infringedRule);
+                cell = row.createCell(colNum++);
+                if (res.getLevel() == null)
+                    cell.setCellValue(0);
+                else cell.setCellValue(res.getLevel());
+                cell = row.createCell(colNum++);
+                cell.setCellValue(res.getType());
+                cell = row.createCell(colNum++);
+                cell.setCellValue(res.getId());
+                cell = row.createCell(colNum++);
+                String name = res.getName();
+                cell.setCellValue(name == null ? "" : name);
+                cell = row.createCell(colNum++);
+
+                if (rules.get(infringedRule) == null)
+                    cell.setCellValue("");
+                else {
+                    String message = res.getSpecificMessage() != null ? rules.get(infringedRule).getMessage() + " " + res.getSpecificMessage() : rules.get(infringedRule).getMessage();
+                    cell.setCellValue(message);
+                }
+
+            }
+            sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum - 1));
+            for (int i = 1; i < colNum; i++)
+                sheet.autoSizeColumn(i);
+            sheet.createFreezePane(0, 1);
+
+
+            try {
+                FileOutputStream outputStream = new FileOutputStream(path + File.separator + key + ".xlsx");
+                workbook.write(outputStream);
+                workbook.close();
+            } catch (Exception e) {
+                LOGGER.severe("Excel creation failed for " + key);
+                e.printStackTrace();
+            }
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
     public void writeResultsPerIGM(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
         LOGGER.info("Creating reports...");
 
         File excelResults = new File(path.getParentFile()+"/excelResults");
         excelResults.mkdir();
-        synthesis.entrySet().parallelStream().forEach(k->{
-            try{
-                XSSFWorkbook workbook = new XSSFWorkbook();
-                XSSFCellStyle redStyle = coloredCell(workbook, Color.RED);
-                XSSFCellStyle orangeStyle = coloredCell(workbook, Color.ORANGE);
-                XSSFSheet sheet = workbook.createSheet(k.getKey());
-                int rowNum = 0;
-                Row row = sheet.createRow(rowNum++);
-                int colNum = 0;
-                Cell cell = row.createCell(colNum++);
-                cell.setCellValue("SEVERITY");
-                cell = row.createCell(colNum++);
-                cell.setCellValue("RULE");
-                cell = row.createCell(colNum++);
-                cell.setCellValue("LEVEL");
-                cell = row.createCell(colNum++);
-                cell.setCellValue("OBJECT");
-                cell = row.createCell(colNum++);
-                cell.setCellValue("ID");
-                cell = row.createCell(colNum++);
-                cell.setCellValue("NAME");
-                cell = row.createCell(colNum++);
-                cell.setCellValue("MESSAGE");
-                for (EvaluationResult res : synthesis.get(k.getKey())){
-                    String infringedRule = res.getRule();
-                    row = sheet.createRow(rowNum++);
-                    colNum = 0;
-                    cell = row.createCell(colNum++);
-                    String severity = "UNKNOWN";
-                    if (rules.get(infringedRule)!=null)
-                        severity = rules.get(infringedRule).getSeverity();
-                    cell.setCellValue(severity);
-                    if (severity.equalsIgnoreCase("ERROR"))
-                        cell.setCellStyle(redStyle);
-                    else if (severity.equalsIgnoreCase("WARNING"))
-                        cell.setCellStyle(orangeStyle);
-                    cell = row.createCell(colNum++);
-                    cell.setCellValue(infringedRule);
-                    cell = row.createCell(colNum++);
-                    if (res.getLevel()==null)
-                        cell.setCellValue(0);
-                    else cell.setCellValue(res.getLevel());
-                    cell = row.createCell(colNum++);
-                    cell.setCellValue(res.getType());
-                    cell = row.createCell(colNum++);
-                    cell.setCellValue(res.getId());
-                    cell = row.createCell(colNum++);
-                    String name = res.getName();
-                    cell.setCellValue(name==null?"":name);
-                    cell = row.createCell(colNum++);
+        synthesis.entrySet().parallelStream().forEach(e->{
 
-                    if (rules.get(infringedRule)==null)
-                        cell.setCellValue("");
-                    else {
-                        String message = res.getSpecificMessage()!=null? rules.get(infringedRule).getMessage() + " " + res.getSpecificMessage():rules.get(infringedRule).getMessage() ;
-                        cell.setCellValue(message);
-                    }
+            writeSingleReport(e.getKey(), e.getValue(), rules, excelResults);
 
-                }
-                sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum-1));
-                for (int i = 1; i < colNum; i++)
-                    sheet.autoSizeColumn(i);
-                sheet.createFreezePane(0, 1);
-
-
-                try {
-                    FileOutputStream outputStream = new FileOutputStream(excelResults+File.separator+k.getKey()+".xlsx");
-                    workbook.write(outputStream);
-                    workbook.close();
-                } catch (Exception e) {
-                    LOGGER.severe("Excel creation failed for "+k.getKey());
-                    e.printStackTrace();
-                }
-
-            }catch (Exception e){
-                throw new RuntimeException(e);
-            }
         });
 
         LOGGER.info("All excel reports created");

@@ -1,7 +1,20 @@
-package ocl;
+/**
+ *       THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+ *       EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *       OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+ *       SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *       INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ *       TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ *       BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ *       CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *       ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+ *       DAMAGE.
+ *       (c) RTE 2019
+ *       Authors: Marco Chiaramello, Jerome Picault
+ **/
+package ocl.service;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+import ocl.Profile;
 import ocl.util.EvaluationResult;
 import ocl.util.IOUtils;
 import ocl.util.RuleDescription;
@@ -15,29 +28,43 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.Diagnostician;
-import org.eclipse.emf.ecore.xmi.IllegalValueException;
 import org.eclipse.emf.ecore.xmi.XMLResource;
 import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
 import org.eclipse.ocl.pivot.model.OCLstdlib;
 import org.eclipse.ocl.xtext.completeocl.CompleteOCLStandaloneSetup;
+import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.*;
-import java.lang.reflect.Type;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipOutputStream;
 
-public class Validation {
+public class ValidationService extends BasicService implements ValidationListener{
+
+    private ReportingListener reportingListener = null;
+
     private static Resource ecoreResource;
     private static ResourceSet resourceSet;
 
@@ -45,11 +72,7 @@ public class Validation {
 
     private static List<EPackage> myPList = new ArrayList<>();
 
-    private static Logger LOGGER = null;
-    static {
-        System.setProperty("java.util.logging.SimpleFormatter.format",
-                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
-        LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
+    static{
         try {
             resourceSet = new ResourceSetImpl();
             HashMap<String, String> configs = getConfig();
@@ -59,10 +82,28 @@ public class Validation {
         }
     }
 
-    public Validation(){
+
+    public static HashMap<String, RuleDescription> rules;
+
+    public ValidationService(){
         super();
+
+        try {
+            RuleDescriptionParser parser = new RuleDescriptionParser();
+            rules = parser.parseRules("config/UMLRestrictionRules.xml");
+            parser = null;
+        } catch (ParserConfigurationException | IOException | SAXException e){
+            e.printStackTrace();
+        }
     }
 
+    /**
+     * Registers a validation listener
+     * @param rl
+     */
+    public void setListener(ReportingListener rl){
+        reportingListener = rl;
+    }
 
     private  static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
         HashMap<String,String> configs =  new HashMap<>();
@@ -77,10 +118,9 @@ public class Validation {
             configs.put("ecore_model", IOUtils.resolveEnvVars(ecore_model));
         }
         else{
-            LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
+            logger.severe("Variable basic_model or ecore_model are missing from properties file");
             System.exit(0);
         }
-
 
         return configs;
     }
@@ -97,7 +137,7 @@ public class Validation {
             ecoreResource = resourceSet.getResource(mmURI, true);
         }
         catch (Exception e ){
-            LOGGER.severe("Ecore file missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
+            logger.severe("Ecore file missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
             System.exit(0);
         }
 
@@ -122,8 +162,6 @@ public class Validation {
         return pList;
     }
 
-
-
     public static ResourceSet createResourceSet(){
 
         ResourceSet resourceSet = new ResourceSetImpl();
@@ -135,55 +173,6 @@ public class Validation {
         }
 
         return resourceSet;
-    }
-
-
-    private Diagnostic evaluate(InputStream inputStream, String name){
-
-        ResourceSet resourceSet = createResourceSet();
-
-        HashMap<String, Boolean> options = new HashMap<>();
-        options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
-        UUID uuid = UUID.randomUUID();
-        Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
-        try {
-            model.load(inputStream,options);
-        } catch (Resource.IOWrappedException we){
-            Exception exc = we.getWrappedException();
-            if (exc instanceof IllegalValueException){
-                IllegalValueException ive = (IllegalValueException) exc;
-                EObject object = ive.getObject();
-                String n = (object.eClass().getEStructuralFeature("name") != null) ? (" "+object.eGet(object.eClass().getEStructuralFeature("name"))+" ") : "";
-                String id =  (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null;
-                LOGGER.severe("Problem with: " + id + n + " (value:" + ive.getValue().toString() + ")");
-            }
-            LOGGER.severe(exc.getMessage());
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-
-        EObject rootObject = model.getContents().get(0);
-
-        Diagnostician take = new Diagnostician();
-
-        Diagnostic diagnostics;
-
-        diagnostics = take.validate(rootObject);
-        LOGGER.info(name + " validated");
-
-        rootObject = null;
-        take = null;
-        inputStream = null;
-        resourceSet = null;
-
-        return diagnostics;
-    }
-
-    private boolean excludeRuleName(String ruleName){
-        // MessageType introduced in ecore file but not managed on Java side
-        return "MessageType".equalsIgnoreCase(ruleName);
     }
 
 
@@ -248,45 +237,109 @@ public class Validation {
         return results;
     }
 
+    private boolean excludeRuleName(String ruleName){
+        // MessageType introduced in ecore file but not managed on Java side
+        return "MessageType".equalsIgnoreCase(ruleName);
+    }
 
-    public static void main(String[] args) throws IOException, SAXException, ParserConfigurationException {
 
-        Gson gson = new Gson();
-        Type listType = new TypeToken<List<String>>() {}.getType();
-        BufferedReader br = new BufferedReader(new FileReader(args[0]));
-        List<String> myList = gson.fromJson(br,listType);
+    private Diagnostic evaluate(InputStream inputStream){
 
-        Validation validation = new Validation();
-        RuleDescriptionParser parser = new RuleDescriptionParser();
-        HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
-        parser = null;
-        for(String s:myList){
-            File file = new File(s);
-            ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
-            Enumeration<? extends ZipEntry> entries = zip.entries();
-            while (entries.hasMoreElements()) {
-                ZipEntry entry = entries.nextElement();
-                InputStream xmlStream = zip.getInputStream(entry);
-                List<EvaluationResult> res = validation.getErrors(validation.evaluate(xmlStream,entry.getName()), rules);
-                OutputStream zipout = Files.newOutputStream(Paths.get(file.getParentFile().getAbsolutePath() + File.separator +entry.getName().replace("xmi","json") +".zip"));
-                ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
-                String json = new Gson().toJson(res);
-                ZipEntry entry_ = new ZipEntry(entry.getName() + ".json"); // The name
-                zipOutputStream.putNextEntry(entry_);
-                zipOutputStream.write(json.getBytes());
-                zipOutputStream.closeEntry();
-                zipOutputStream.close();
-                file.delete();
-                res=null;
-                xmlStream.close();
+        ResourceSet resourceSet = createResourceSet();
 
-            }
+        HashMap<String, Boolean> options = new HashMap<>();
+        options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
+        UUID uuid = UUID.randomUUID();
+        Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
+        try {
+            model.load(inputStream,options);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
         }
-        File jsonCPU = new File(args[0]);
-        jsonCPU.delete();
-        validation = null;
 
+        EObject rootObject = model.getContents().get(0);
+
+        Diagnostician take = new Diagnostician();
+
+        Diagnostic diagnostics;
+
+        diagnostics = take.validate(rootObject);
+
+        rootObject = null;
+        take = null;
+        inputStream = null;
+        resourceSet = null;
+
+        return diagnostics;
+    }
+
+
+    @Override
+    public void run() {
 
     }
 
+    /***************************************************************************************************************/
+
+    private InputStream toInputStream(Document doc) throws TransformerException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        Source xmlSource = new DOMSource(doc);
+        Result outputTarget = new StreamResult(outputStream);
+        TransformerFactory.newInstance().newTransformer().transform(xmlSource, outputTarget);
+        InputStream is = new ByteArrayInputStream(outputStream.toByteArray());
+        return is;
+    }
+
+
+    @Override
+    public void enqueueForValidation(Profile p, Document xmi) {
+        String key = p.xml_name;
+        logger.info("Validating:\t"+key);
+
+        Future<List<EvaluationResult>> results = executorService.submit(new ValidationTask(key, xmi));
+
+        //FIXME
+        printPoolSize();
+
+        try {
+            List<EvaluationResult> res = results.get();
+            logger.info("Validated:\t" + key + res.size());
+
+            reportingListener.enqueueForReporting(p, results.get());
+
+        } catch (InterruptedException | ExecutionException e){
+            e.printStackTrace();
+        }
+    }
+
+
+    private class ValidationTask implements Callable{
+
+        private String key;
+        private Document xmi;
+
+        private ValidationTask(String key, Document xmi){
+            this.key = key;
+            this.xmi = xmi;
+        }
+
+
+        @Override
+        public List<EvaluationResult> call() {
+
+            try {
+                InputStream xmlStream = toInputStream(xmi);
+
+                Diagnostic diagnostic = evaluate(xmlStream);
+
+                List<EvaluationResult> res = getErrors(diagnostic, rules);
+
+                return res;
+            } catch (TransformerException e){
+                //FIXME: ???
+            }
+            return new ArrayList<>();
+        }
+    }
 }
