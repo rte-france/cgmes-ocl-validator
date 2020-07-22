@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,4 +61,15 @@ public class IOUtils{
     }
 
 
+    public static String getExtensionByStringHandling(String filename) {
+        return Optional.ofNullable(filename)
+                .filter(f -> f.contains("."))
+                .map(f -> f.substring(filename.lastIndexOf(".") + 1))
+                .map(Object::toString)
+                .orElse("");
+    }
+
+    public static String trimExtension(String str) {
+        return str.substring(0, str.lastIndexOf('.'));
+    }
 }

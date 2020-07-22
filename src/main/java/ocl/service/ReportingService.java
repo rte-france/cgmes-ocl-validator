@@ -15,21 +15,40 @@
 package ocl.service;
 
 import ocl.Profile;
+import ocl.service.util.Configuration;
+import ocl.service.util.ReportWriter;
+import ocl.service.util.XMLReportWriter;
 import ocl.util.EvaluationResult;
-import ocl.util.RuleDescription;
-import ocl.util.XLSWriter;
+import ocl.service.util.XLSReportWriter;
 
-import java.io.File;
-import java.util.HashMap;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
-import java.util.concurrent.Callable;
 
-import static ocl.service.util.ServiceUtils.trimExtension;
+import static ocl.util.IOUtils.trimExtension;
 
 public class ReportingService extends BasicService implements ReportingListener{
 
+    private Path xlsReportsPath = Configuration.reportsDir.resolve("excelReports");
+    private Path xmlReportsPath = Configuration.reportsDir.resolve("xmlReports");
+
     public ReportingService(){
+
         super();
+        try {
+            if (Files.notExists(xlsReportsPath)){
+                Files.createDirectories(xlsReportsPath);
+            }
+            if (Files.notExists(xmlReportsPath)){
+                Files.createDirectories(xmlReportsPath);
+            }
+        } catch (IOException e){
+            e.printStackTrace();
+        }
+
+        logger.info("Reporting Service reports directory:" + xlsReportsPath.getParent());
+
     }
 
     @Override
@@ -49,35 +68,32 @@ public class ReportingService extends BasicService implements ReportingListener{
 
     }
 
-    private abstract class ReportingTask implements Runnable{
+    private class ReportingTask implements Runnable{
 
         protected Profile svProfile;
         protected List<EvaluationResult> validationResults;
+        protected ReportWriter reportWriter;
+        protected Path path;
 
         ReportingTask(Profile p, List<EvaluationResult> results){
             this.svProfile = p;
             this.validationResults = results;
         }
 
+        public void run()  {
+            reportWriter.writeSingleReport(svProfile, validationResults, ValidationService.rules, path);
+            logger.info("Wrote report:\t" + svProfile.xml_name);
+        }
     }
 
     private class ExcelReportingTask extends ReportingTask{
 
         ExcelReportingTask(Profile p, List<EvaluationResult> results){
             super(p, results);
+            reportWriter = new XLSReportWriter();
+            path = xlsReportsPath;
         }
 
-        @Override
-        public void run()  {
-
-            XLSWriter writer = new XLSWriter();
-            //TODO
-            //FIXME - path
-            String key = trimExtension(svProfile.xml_name);
-            writer.writeSingleReport(key, validationResults, ValidationService.rules, new File("."));
-            logger.info("Wrote report:\t" + key);
-
-        }
     }
 
 
@@ -85,13 +101,10 @@ public class ReportingService extends BasicService implements ReportingListener{
 
         XmlReportingTask(Profile p, List<EvaluationResult> results){
             super(p, results);
+            reportWriter = new XMLReportWriter();
+            path = xmlReportsPath;
         }
 
-        @Override
-        public void run() {
-            //FIXME
-            //TODO - export compliant with QAS portal
-        }
     }
 
 

@@ -12,9 +12,12 @@
  *       (c) RTE 2019
  *       Authors: Marco Chiaramello, Jerome Picault
  **/
-package ocl.util;
+package ocl.service.util;
 
 import ocl.OCLEvaluator;
+import ocl.Profile;
+import ocl.util.EvaluationResult;
+import ocl.util.RuleDescription;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
@@ -27,19 +30,23 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 import java.util.logging.Logger;
 
-public class XLSWriter {
+import static ocl.util.IOUtils.trimExtension;
 
-    private static Logger LOGGER = null;
-    static {
-        System.setProperty("java.util.logging.SimpleFormatter.format",
-                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
-        LOGGER=Logger.getLogger(OCLEvaluator.class.getName());
-    }
+public class XLSReportWriter implements ReportWriter {
 
+    /**
+     *
+     * @param wb
+     * @param color
+     * @return
+     */
     private XSSFCellStyle coloredCell(XSSFWorkbook wb, Color color){
         XSSFCellStyle style1 = wb.createCellStyle();
         style1.setFillForegroundColor(new XSSFColor(color));
@@ -48,7 +55,20 @@ public class XLSWriter {
     }
 
 
-    public void writeSingleReport(String key, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, File path) {
+    /**
+     *
+     * @param p
+     * @param results
+     * @param rules
+     * @param path
+     */
+    @Override
+    public void writeSingleReport(Profile p, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) {
+        String key = trimExtension(p.xml_name);
+        writeSingleReport(key, results, rules, path);
+    }
+
+    public void writeSingleReport(String key, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) {
         try {
             XSSFWorkbook workbook = new XSSFWorkbook();
             XSSFCellStyle redStyle = coloredCell(workbook, Color.RED);
@@ -118,7 +138,7 @@ public class XLSWriter {
                 workbook.write(outputStream);
                 workbook.close();
             } catch (Exception e) {
-                LOGGER.severe("Excel creation failed for " + key);
+                logger.severe("Excel creation failed for " + key);
                 e.printStackTrace();
             }
 
@@ -128,96 +148,38 @@ public class XLSWriter {
     }
 
 
-    public void writeResultsPerIGM(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
-        LOGGER.info("Creating reports...");
+    /**
+     *
+     * @param synthesis
+     * @param rules
+     * @param path
+     */
+    public void writeResultsPerIGM(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, Path path){
+        logger.info("Creating reports...");
 
-        File excelResults = new File(path.getParentFile()+"/excelResults");
-        excelResults.mkdir();
+        if (Files.notExists(path)){
+            try {
+                Files.createDirectory(path);
+            } catch (IOException e){
+                e.printStackTrace();
+            }
+        }
         synthesis.entrySet().parallelStream().forEach(e->{
 
-            writeSingleReport(e.getKey(), e.getValue(), rules, excelResults);
+            writeSingleReport(e.getKey(), e.getValue(), rules, path);
 
         });
 
-        LOGGER.info("All excel reports created");
+        logger.info("All excel reports created");
     }
 
 
-    public void writeResults(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
-
-        XSSFWorkbook workbook = new XSSFWorkbook();
-        XSSFCellStyle redStyle = coloredCell(workbook, Color.RED);
-        XSSFCellStyle orangeStyle = coloredCell(workbook, Color.ORANGE);
-        for (String k : synthesis.keySet()){
-            XSSFSheet sheet = workbook.createSheet(k);
-            int rowNum = 0;
-            Row row = sheet.createRow(rowNum++);
-            int colNum = 0;
-            Cell cell = row.createCell(colNum++);
-            cell.setCellValue("SEVERITY");
-            cell = row.createCell(colNum++);
-            cell.setCellValue("RULE");
-            cell = row.createCell(colNum++);
-            cell.setCellValue("LEVEL");
-            cell = row.createCell(colNum++);
-            cell.setCellValue("OBJECT");
-            cell = row.createCell(colNum++);
-            cell.setCellValue("ID");
-            cell = row.createCell(colNum++);
-            cell.setCellValue("NAME");
-            cell = row.createCell(colNum++);
-            cell.setCellValue("MESSAGE");
-            for (EvaluationResult res : synthesis.get(k)){
-                String infringedRule = res.getRule();
-                row = sheet.createRow(rowNum++);
-                colNum = 0;
-                cell = row.createCell(colNum++);
-                String severity = "UNKNOWN";
-                if (rules.get(infringedRule)!=null)
-                    severity = rules.get(infringedRule).getSeverity();
-                cell.setCellValue(severity);
-                if (severity.equalsIgnoreCase("ERROR"))
-                    cell.setCellStyle(redStyle);
-                else if (severity.equalsIgnoreCase("WARNING"))
-                    cell.setCellStyle(orangeStyle);
-                cell = row.createCell(colNum++);
-                cell.setCellValue(infringedRule);
-                cell = row.createCell(colNum++);
-                if (res.getLevel()==null)
-                    cell.setCellValue(0);
-                else cell.setCellValue(res.getLevel());
-                cell = row.createCell(colNum++);
-                cell.setCellValue(res.getType());
-                cell = row.createCell(colNum++);
-                cell.setCellValue(res.getId());
-                cell = row.createCell(colNum++);
-                String name = res.getName();
-                cell.setCellValue(name==null?"":name);
-                cell = row.createCell(colNum++);
-                String message = res.getName();
-                if (rules.get(infringedRule)==null)
-                    cell.setCellValue("");
-                else
-                    cell.setCellValue(rules.get(infringedRule).getMessage());
-
-            }
-            sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum-1));
-            for (int i = 1; i < colNum; i++)
-                sheet.autoSizeColumn(i);
-            sheet.createFreezePane(0, 1);
-        }
-
-        try {
-            FileOutputStream outputStream = new FileOutputStream(path);
-            workbook.write(outputStream);
-            workbook.close();
-            LOGGER.info("Excel created: " + path);
-        } catch (Exception e) {
-            LOGGER.severe("Excel creation failed");
-            e.printStackTrace();
-        }
-    }
-
+    /**
+     *
+     * @param synthesis
+     * @param rules
+     * @param path
+     */
     public void writeUnknownRulesReport(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
         Set<String> unknownRulesSet = new HashSet<String>();
         for (String k : synthesis.keySet()){
@@ -262,9 +224,9 @@ public class XLSWriter {
             FileOutputStream outputStream = new FileOutputStream(path);
             workbook.write(outputStream);
             workbook.close();
-            LOGGER.info("Excel created: " + path);
+            logger.info("Excel created: " + path);
         } catch (Exception e) {
-            LOGGER.severe("Debug Excel creation failed");
+            logger.severe("Debug Excel creation failed");
             e.printStackTrace();
         }
 

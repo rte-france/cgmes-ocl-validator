@@ -15,9 +15,9 @@
 package ocl.util;
 
 import com.google.gson.Gson;
-import ocl.OCLEvaluator;
 import ocl.Profile;
 
+import ocl.service.util.Configuration;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -134,9 +134,7 @@ public class CheckXMLConsistency {
 
 
     public void writeJsonResults(List<EvaluationResult> results) throws IOException, URISyntaxException {
-
-        File cachedir = new File(OCLEvaluator.getConfig().get("cacheDir"));
-        OutputStream zipout = Files.newOutputStream(Paths.get(cachedir.getAbsolutePath()+File.separator+caseName+".json.zip"));
+        OutputStream zipout = Files.newOutputStream(Paths.get(Configuration.cacheDir.toAbsolutePath().toString()+File.separator+caseName+".json.zip"));
         ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
         String json = new Gson().toJson(results);
         ZipEntry entry_ = new ZipEntry(caseName + ".xmi.json"); // The name

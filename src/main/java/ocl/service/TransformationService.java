@@ -14,10 +14,10 @@
  **/
 package ocl.service;
 
-import ocl.OCLEvaluator;
 import ocl.Profile;
+import ocl.service.util.Configuration;
+import ocl.service.util.TransformationUtils;
 import ocl.service.util.XGMPreparationUtils;
-import ocl.service.util.XMITransformationUtils;
 import ocl.util.CheckXMLConsistency;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
@@ -46,10 +46,10 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ocl.service.util.XMITransformationUtils.addNode;
-import static ocl.service.util.XMITransformationUtils.convertToArray;
-import static ocl.service.util.XMITransformationUtils.getNodeList;
-import static ocl.service.util.XMITransformationUtils.getSimpleNameNoExt;
+import static ocl.service.util.TransformationUtils.addNode;
+import static ocl.service.util.TransformationUtils.convertToArray;
+import static ocl.service.util.TransformationUtils.getNodeList;
+import static ocl.service.util.TransformationUtils.getSimpleNameNoExt;
 
 /**
  * This service is responsible for:
@@ -64,12 +64,12 @@ public class TransformationService extends BasicService implements Transformatio
     private static TransformerFactory tfactory = TransformerFactory.newInstance();
     private static String ECORE_FILE = "cgmes61970oclModel.ecore";
 
-    private XMITransformationUtils.BDExtensions bdExtensions = new XMITransformationUtils.BDExtensions();
+    private TransformationUtils.BDExtensions bdExtensions = new TransformationUtils.BDExtensions();
     private HashMap<String,String> brlndType = new HashMap<>();
     private HashMap<String,String> xmiXmlns = new HashMap<>();
     private Set<String> classes = new HashSet<>();
     private HashMap<String, Integer> ruleLevels= new HashMap<>();
-    private HashMap<String, XMITransformationUtils.BDObject> BDObjects = new HashMap<>();
+    private HashMap<String, TransformationUtils.BDObject> BDObjects = new HashMap<>();
     private HashMap<String,Node> BVmap = new HashMap<>();
     private HashMap<String,String> authExt = new HashMap<>();
 
@@ -136,7 +136,7 @@ public class TransformationService extends BasicService implements Transformatio
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         builderFactory.setNamespaceAware(true);
         DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
-        Document doc = documentBuilder.parse(OCLEvaluator.getConfig().get("ecore_model"));
+        Document doc = documentBuilder.parse(Configuration.configs.get("ecore_model"));
         NodeList nodeList = doc.getElementsByTagName("eClassifiers");
         for(int i=0; i<nodeList.getLength();i++){
             String className= nodeList.item(i).getAttributes().getNamedItem("name").getNodeValue();
@@ -187,7 +187,7 @@ public class TransformationService extends BasicService implements Transformatio
      * @throws SAXException
      */
     private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
-        Node[] bdExts = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("bdExtensions"))));
+        Node[] bdExts = convertToArray(getNodeList(new File(Configuration.configs.get("bdExtensions"))));
 
         for (Node bdExt : bdExts) {
             if(!StringUtils.isEmpty(bdExt.getLocalName())){
@@ -261,7 +261,7 @@ public class TransformationService extends BasicService implements Transformatio
                 logger.info("XMI ready for:\t "+ key);
 
                 //DEBUG
-                //XMITransformationUtils.printDocument(entry.getValue().get(), entry.getKey().xml_name+"_xmi.xml");
+                //TransformationUtils.printDocument(entry.getValue().get(), entry.getKey().xml_name+"_xmi.xml");
                 validationListener.enqueueForValidation(entry.getKey(), entry.getValue().get());
 
             } catch (InterruptedException | ExecutionException e){
@@ -321,7 +321,7 @@ public class TransformationService extends BasicService implements Transformatio
                 CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(EQ,TP,SSH,key, sv_sn.get(0));
 
                 if(!xmlConsistency.isExcluded()){
-                    Document merged_xml = createMerge(EQBD,TPBD, XMITransformationUtils.getBusinessProcess(key.xml_name), key, EQ, SSH, TP,
+                    Document merged_xml = createMerge(EQBD,TPBD, TransformationUtils.getBusinessProcess(key.xml_name), key, EQ, SSH, TP,
                             XGMPreparationUtils.defaultBDIds);
                     resulting_xmi = createXmi(merged_xml);
                     logger.info("Transformed:\t"+key.xml_name);
@@ -700,7 +700,7 @@ public class TransformationService extends BasicService implements Transformatio
             }
         }
         Node[] lines = convertToArray(target.getDocumentElement().getChildNodes());
-        Node[] basics = convertToArray(getNodeList(new File(OCLEvaluator.getConfig().get("basic_model"))));
+        Node[] basics = convertToArray(getNodeList(new File(Configuration.configs.get("basic_model"))));
 
 
 
@@ -798,7 +798,7 @@ public class TransformationService extends BasicService implements Transformatio
         DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         builderFactory.setNamespaceAware(true);
         DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
-        Document doc = documentBuilder.parse(OCLEvaluator.getConfig().get("ecore_model"));
+        Document doc = documentBuilder.parse(Configuration.configs.get("ecore_model"));
         Node[] subpackages = convertToArray(doc.getElementsByTagName("eSubpackages"));
 
 
@@ -1095,7 +1095,7 @@ public class TransformationService extends BasicService implements Transformatio
      * @param nodeListEqBd
      */
     private void mergeBoundaries(NodeList nodeListTpBd, NodeList nodeListEqBd){
-        HashMap<String, XMITransformationUtils.BDObject> TPObj = new HashMap<>();
+        HashMap<String, TransformationUtils.BDObject> TPObj = new HashMap<>();
         NodeList TpinBD = nodeListTpBd.item(0).getOwnerDocument().getElementsByTagName("cim:TopologicalNode");
         for(int i=0;i<TpinBD.getLength();i++){
             if(TpinBD.item(i).hasChildNodes()){
@@ -1103,7 +1103,7 @@ public class TransformationService extends BasicService implements Transformatio
                     if(TpinBD.item(i).getChildNodes().item(c).getLocalName()!=null){
                         if(TpinBD.item(i).getChildNodes().item(c).getLocalName().contains("TopologicalNode.ConnectivityNodeContainer")){
                             String id = TpinBD.item(i).getChildNodes().item(c).getAttributes().item(0).getNodeValue().replace("#","");
-                            XMITransformationUtils.BDObject bdObject = new XMITransformationUtils.BDObject();
+                            TransformationUtils.BDObject bdObject = new TransformationUtils.BDObject();
                             bdObject.TPn=TpinBD.item(i);
                             TPObj.put(id,bdObject);
                         }

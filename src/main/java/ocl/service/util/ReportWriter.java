@@ -9,33 +9,24 @@
  *       CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *       ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  *       DAMAGE.
- *       (c) RTE 2019
+ *       (c) RTE 2020
  *       Authors: Marco Chiaramello, Jerome Picault
  **/
 package ocl.service.util;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.util.Optional;
+import ocl.Profile;
+import ocl.util.EvaluationResult;
+import ocl.util.RuleDescription;
 
-public class ServiceUtils {
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Logger;
 
+public interface ReportWriter {
 
-    public static String getExtensionByStringHandling(String filename) {
-        return Optional.ofNullable(filename)
-                .filter(f -> f.contains("."))
-                .map(f -> f.substring(filename.lastIndexOf(".") + 1))
-                .map(Object::toString)
-                .orElse("");
-    }
+    Logger logger = Logger.getLogger(ReportWriter.class.getName());;
 
-    public static String trimExtension(String str) {
-        return str.substring(0, str.lastIndexOf('.'));
-    }
-
+    void writeSingleReport(Profile profile, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) ;
 
 }

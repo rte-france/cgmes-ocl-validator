@@ -15,8 +15,8 @@
 package ocl.service;
 
 import ocl.Profile;
-import ocl.service.util.ServiceUtils;
 import ocl.service.util.XGMPreparationUtils;
+import ocl.util.IOUtils;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -76,7 +76,7 @@ public class WatchingService extends BasicService {
         keys = new HashMap<WatchKey, Path>();
 
         walkAndRegisterDirectories(dir);
-        logger.info("Watching service initialized");
+        logger.info("Watching service monitoring directory:"+dir.toString());
     }
 
 
@@ -135,7 +135,7 @@ public class WatchingService extends BasicService {
                 iter.remove(); //thread-safe
                 //TODO: do something with the file
                 File f = entry.getKey().toFile();
-                String ext = ServiceUtils.getExtensionByStringHandling(f.getName());
+                String ext = IOUtils.getExtensionByStringHandling(f.getName());
                 if (!"zip".equalsIgnoreCase(ext)){
                     logger.warning("Not an archive: "+f);
                 } else {

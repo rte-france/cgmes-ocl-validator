@@ -18,10 +18,14 @@ import ocl.service.ReportingService;
 import ocl.service.TransformationService;
 import ocl.service.ValidationService;
 import ocl.service.WatchingService;
+import ocl.service.util.Configuration;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 public class CGMESValidatorDeamon {
@@ -34,17 +38,23 @@ public class CGMESValidatorDeamon {
 
     }
 
+    private Path inputPath;
+
     private WatchingService watchingService;
     private TransformationService transformationService;
     private ValidationService validationService;
     private ReportingService reportingService;
 
-    private void initializeServices() throws IOException {
-        logger.info("Initialization of services...");
+    public CGMESValidatorDeamon(Path path){
+        this.inputPath = path;
 
-        Path dir = Paths.get("/local/home/jeropica/test");
+    }
+
+    private void initializeServices() throws IOException {
+
+        logger.info("Initialization of services...");
         // watching service
-        watchingService = new WatchingService(dir);
+        watchingService = new WatchingService(inputPath);
         // transformation service
         transformationService = new TransformationService();
         watchingService.setListener(transformationService);
@@ -75,8 +85,9 @@ public class CGMESValidatorDeamon {
 
 
     public static void main(String args[]){
+        Locale.setDefault(new Locale("en", "EN"));
 
-        CGMESValidatorDeamon deamon = new CGMESValidatorDeamon();
+        CGMESValidatorDeamon deamon = new CGMESValidatorDeamon(Configuration.inputDir);
 
         // initialization of services
         try {
