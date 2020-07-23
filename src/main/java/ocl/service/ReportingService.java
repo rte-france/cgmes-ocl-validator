@@ -17,6 +17,7 @@ package ocl.service;
 import ocl.Profile;
 import ocl.service.util.Configuration;
 import ocl.service.util.ReportWriter;
+import ocl.service.util.ValidationUtils;
 import ocl.service.util.XMLReportWriter;
 import ocl.util.EvaluationResult;
 import ocl.service.util.XLSReportWriter;
@@ -25,8 +26,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-
-import static ocl.util.IOUtils.trimExtension;
 
 public class ReportingService extends BasicService implements ReportingListener{
 
@@ -81,7 +80,7 @@ public class ReportingService extends BasicService implements ReportingListener{
         }
 
         public void run()  {
-            reportWriter.writeSingleReport(svProfile, validationResults, ValidationService.rules, path);
+            reportWriter.writeSingleReport(svProfile, validationResults, ValidationUtils.rules, path);
             logger.info("Wrote report:\t" + svProfile.xml_name);
         }
     }

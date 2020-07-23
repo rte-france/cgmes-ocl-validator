@@ -73,7 +73,7 @@ public class WatchingService extends BasicService {
         super();
 
         watcher = FileSystems.getDefault().newWatchService();
-        keys = new HashMap<WatchKey, Path>();
+        keys = new HashMap<>();
 
         walkAndRegisterDirectories(dir);
         logger.info("Watching service monitoring directory:"+dir.toString());

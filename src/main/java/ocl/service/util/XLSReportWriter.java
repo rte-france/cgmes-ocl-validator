@@ -14,7 +14,6 @@
  **/
 package ocl.service.util;
 
-import ocl.OCLEvaluator;
 import ocl.Profile;
 import ocl.util.EvaluationResult;
 import ocl.util.RuleDescription;
@@ -35,7 +34,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
-import java.util.logging.Logger;
 
 import static ocl.util.IOUtils.trimExtension;
 

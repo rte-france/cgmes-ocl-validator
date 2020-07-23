@@ -18,6 +18,7 @@ import com.google.gson.Gson;
 import ocl.Profile;
 
 import ocl.service.util.Configuration;
+import ocl.service.util.ValidationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -40,9 +41,6 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class CheckXMLConsistency {
-
-    RuleDescriptionParser parser = new RuleDescriptionParser();
-    HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
 
     private boolean isExcluded = false;
     private String caseName;
@@ -94,9 +92,9 @@ public class CheckXMLConsistency {
         checkIDUniqueness(SV);
         List<EvaluationResult> results = new ArrayList<>();
         String ruleName = "IDuniqueness";
-        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
-        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-        String specificMessage= rules.get(ruleName) == null? "mRID (rdf:ID or rdf:about) not unique within model":null;
+        String severity = ValidationUtils.rules.get(ruleName) == null ? "UNKOWN" : ValidationUtils.rules.get(ruleName).getSeverity();
+        int level = ValidationUtils.rules.get(ruleName) == null ? 0 : ValidationUtils.rules.get(ruleName).getLevel();
+        String specificMessage= ValidationUtils.rules.get(ruleName) == null? "mRID (rdf:ID or rdf:about) not unique within model":null;
         for(IDUniqueness idUniqueness:idUniquenessList){
             EvaluationResult evaluationResult = new EvaluationResult(severity,
                     ruleName,

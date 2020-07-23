@@ -51,8 +51,6 @@ public class XMITransformation {
 
     private static TransformerFactory tfactory = TransformerFactory.newInstance();
 
-    private static String ECORE_FILE = "cgmes61970oclModel.ecore";
-
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");

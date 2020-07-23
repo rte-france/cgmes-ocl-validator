@@ -511,8 +511,6 @@ public class TransformationService extends BasicService implements Transformatio
         }
 
 
-
-
         Node[] SVnodes = convertToArray(nodeListsv);
         for (Node sVnode : SVnodes) {
             if(!StringUtils.isEmpty(sVnode.getLocalName())){

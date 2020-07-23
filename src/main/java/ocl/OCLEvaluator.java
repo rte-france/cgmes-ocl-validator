@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import ocl.service.util.Configuration;
 import ocl.service.util.TransformationUtils;
+import ocl.service.util.ValidationUtils;
 import ocl.service.util.XGMPreparationUtils;
 import ocl.service.util.XLSReportWriter;
 import ocl.util.*;
@@ -292,9 +293,6 @@ public class OCLEvaluator {
         Locale.setDefault(new Locale("en", "EN"));
 
         try {
-            // Read rule details
-            RuleDescriptionParser parser = new RuleDescriptionParser();
-            HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
             OCLEvaluator evaluator = new OCLEvaluator();
 
             if(Configuration.debugMode)
@@ -302,13 +300,13 @@ public class OCLEvaluator {
             Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(Configuration.inputDir);
 
             // writeDocument report
-            evaluator.writeExcelReport(synthesis, rules, Configuration.inputDir.resolve("excelResults"));
+            evaluator.writeExcelReport(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("excelResults"));
 
             //writeDocument debug report
-            evaluator.writeDebugReports(synthesis, rules, Configuration.inputDir.resolve("DebugReport.xlsx"));
+            evaluator.writeDebugReports(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("DebugReport.xlsx"));
             evaluator.cleanCache();
 
-        } catch (ParserConfigurationException | IOException | SAXException e){
+        } catch (IOException e){
             e.printStackTrace();
             System.exit(-1);
         }

@@ -23,6 +23,6 @@ import java.util.List;
 
 public interface ReportingListener {
 
-    public void enqueueForReporting(Profile p, List<EvaluationResult> errors);
+    void enqueueForReporting(Profile p, List<EvaluationResult> errors);
 
 }

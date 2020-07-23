@@ -2,31 +2,22 @@ package ocl;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import ocl.service.util.ValidationUtils;
 import ocl.util.EvaluationResult;
-import ocl.util.IOUtils;
 import ocl.util.RuleDescription;
-import ocl.util.RuleDescriptionParser;
 import org.eclipse.emf.common.util.Diagnostic;
-import org.eclipse.emf.common.util.TreeIterator;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EPackage;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.Diagnostician;
 import org.eclipse.emf.ecore.xmi.IllegalValueException;
 import org.eclipse.emf.ecore.xmi.XMLResource;
-import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
-import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
-import org.eclipse.ocl.pivot.model.OCLstdlib;
-import org.eclipse.ocl.xtext.completeocl.CompleteOCLStandaloneSetup;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.*;
 import java.lang.reflect.Type;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -37,104 +28,19 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
+import static ocl.service.util.ValidationUtils.createResourceSet;
+
 public class Validation {
-    private static Resource ecoreResource;
-    private static ResourceSet resourceSet;
-
-    private static URI mmURI;
-
-    private static List<EPackage> myPList = new ArrayList<>();
 
     private static Logger LOGGER = null;
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
         LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
-        try {
-            resourceSet = new ResourceSetImpl();
-            HashMap<String, String> configs = getConfig();
-            prepareValidator(configs.get("ecore_model"));
-        } catch (IOException | URISyntaxException io){
-            io.printStackTrace();
-        }
     }
 
     public Validation(){
         super();
-    }
-
-
-    private  static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
-        HashMap<String,String> configs =  new HashMap<>();
-        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+ File.separator+"config.properties");
-        Properties properties = new Properties();
-        properties.load(config);
-        String basic_model = properties.getProperty("basic_model");
-        String ecore_model = properties.getProperty("ecore_model");
-
-        if (basic_model!=null && ecore_model!=null){
-            configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
-            configs.put("ecore_model", IOUtils.resolveEnvVars(ecore_model));
-        }
-        else{
-            LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
-            System.exit(0);
-        }
-
-
-        return configs;
-    }
-
-    private static void prepareValidator(String ecore_model){
-        CompleteOCLStandaloneSetup.doSetup();
-
-        OCLstdlib.install();
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
-
-
-        try {
-            ecoreResource = resourceSet.getResource(mmURI, true);
-        }
-        catch (Exception e ){
-            LOGGER.severe("Ecore file missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
-            System.exit(0);
-        }
-
-        myPList = getPackages(ecoreResource);
-
-    }
-
-
-    private static List<EPackage> getPackages(Resource r){
-        ArrayList<EPackage> pList = new ArrayList<EPackage>();
-        if (r.getContents() != null)
-            for (EObject obj : r.getContents())
-                if (obj instanceof EPackage) {
-                    pList.add((EPackage)obj);
-                }
-        TreeIterator<EObject> test = r.getAllContents();
-        while(test.hasNext()){
-            EObject t = test.next();
-            if(t instanceof EPackage)
-                pList.add((EPackage)t);
-        }
-        return pList;
-    }
-
-
-
-    public static ResourceSet createResourceSet(){
-
-        ResourceSet resourceSet = new ResourceSetImpl();
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
-
-        for(EPackage ePackage : myPList){
-            resourceSet.getPackageRegistry().put(ePackage.getNsURI(),ePackage);
-        }
-
-        return resourceSet;
     }
 
 
@@ -257,9 +163,6 @@ public class Validation {
         List<String> myList = gson.fromJson(br,listType);
 
         Validation validation = new Validation();
-        RuleDescriptionParser parser = new RuleDescriptionParser();
-        HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
-        parser = null;
         for(String s:myList){
             File file = new File(s);
             ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
@@ -267,7 +170,7 @@ public class Validation {
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 InputStream xmlStream = zip.getInputStream(entry);
-                List<EvaluationResult> res = validation.getErrors(validation.evaluate(xmlStream,entry.getName()), rules);
+                List<EvaluationResult> res = validation.getErrors(validation.evaluate(xmlStream,entry.getName()), ValidationUtils.rules);
                 OutputStream zipout = Files.newOutputStream(Paths.get(file.getParentFile().getAbsolutePath() + File.separator +entry.getName().replace("xmi","json") +".zip"));
                 ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
                 String json = new Gson().toJson(res);

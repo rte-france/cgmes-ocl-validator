@@ -20,11 +20,8 @@ import ocl.service.ValidationService;
 import ocl.service.WatchingService;
 import ocl.service.util.Configuration;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.logging.Logger;
 

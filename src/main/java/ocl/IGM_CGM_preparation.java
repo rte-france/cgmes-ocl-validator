@@ -15,12 +15,9 @@
 package ocl;
 import ocl.service.util.XGMPreparationUtils;
 import ocl.util.DependencyHandler;
-import ocl.util.IOUtils;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
-import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -43,8 +40,6 @@ public class IGM_CGM_preparation {
     private List<Profile> otherProfiles = new ArrayList<>();
     private List<Profile> BDProfiles = new ArrayList<>();
     HashMap<Profile,List<Profile>> IGM_CGM= new HashMap<>();
-    List<String> defaultBDIds = new ArrayList<>();
-
 
     void readZip(File models) throws ParserConfigurationException, SAXException, IOException {
         SAXParserFactory factory = SAXParserFactory.newInstance();
