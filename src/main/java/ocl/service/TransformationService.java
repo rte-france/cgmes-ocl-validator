@@ -30,7 +30,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -61,31 +60,25 @@ public class TransformationService extends BasicService implements Transformatio
 
     private ValidationListener validationListener = null;
 
-    private static TransformerFactory tfactory = TransformerFactory.newInstance();
-    private static String ECORE_FILE = "cgmes61970oclModel.ecore";
-
     private TransformationUtils.BDExtensions bdExtensions = new TransformationUtils.BDExtensions();
     private HashMap<String,String> brlndType = new HashMap<>();
     private HashMap<String,String> xmiXmlns = new HashMap<>();
     private Set<String> classes = new HashSet<>();
-    private HashMap<String, Integer> ruleLevels= new HashMap<>();
     private HashMap<String, TransformationUtils.BDObject> BDObjects = new HashMap<>();
     private HashMap<String,Node> BVmap = new HashMap<>();
     private HashMap<String,String> authExt = new HashMap<>();
+    protected HashMap<String, Integer> ruleLevels= new HashMap<>();
 
-    //FIXME! - not one global variable
-    boolean isNb = false;
-    boolean isShortCircuit = false;
+    private HashMap<Profile, Boolean> isNB = new HashMap<>();
+    private HashMap<Profile, Boolean> isShortCircuit = new HashMap<>();
 
 
     public TransformationService(){
         super();
-
+        businessRelatedInitialization();
     }
 
-    @Override
-    public void run() {
-
+    private void businessRelatedInitialization(){
         // initialization business-related
         setAuthExt();
         try {
@@ -98,6 +91,15 @@ public class TransformationService extends BasicService implements Transformatio
         } catch(IOException | ParserConfigurationException | SAXException | URISyntaxException e){
             e.printStackTrace();
         }
+    }
+
+    public HashMap<String, Integer> getRuleLevels(){
+        return ruleLevels;
+    }
+
+
+    @Override
+    public void run() {
 
     }
 
@@ -110,6 +112,122 @@ public class TransformationService extends BasicService implements Transformatio
         validationListener = vl;
     }
 
+
+    /*****************************************************************************************************************/
+
+    @Override
+    public void enqueueForTransformation(HashMap<Profile, List<Profile>> xGM) {
+
+        HashMap<Profile, Future<Document>> XMIs = new HashMap<>();
+
+        for (Map.Entry<Profile,List<Profile>> entry: xGM.entrySet()) {
+            logger.info("Transforming:\t" + entry.getKey().xml_name);
+            Future<Document> xmi = executorService.submit(new XMItransformationTask(entry));
+            XMIs.put(entry.getKey(), xmi);
+
+            //TODO: add this only if debug mode
+            printPoolSize();
+        }
+
+        processResults(XMIs);
+
+    }
+
+    private void processResults(HashMap<Profile, Future<Document>> XMIs){
+
+        XMIs.entrySet().parallelStream().forEach(entry->{
+            try{
+                String key = entry.getKey().xml_name;
+                logger.info("XMI ready for:\t "+ key);
+
+                //DEBUG
+                //TransformationUtils.printDocument(entry.getValue().get(), entry.getKey().xml_name+"_xmi.xml");
+                validationListener.enqueueForValidation(entry.getKey(), entry.getValue().get());
+
+            } catch (InterruptedException | ExecutionException e){
+                e.printStackTrace();
+            }
+        });
+
+    }
+
+    private class XMItransformationTask implements Callable {
+
+        private Map.Entry<Profile,List<Profile>> entry;
+
+        private XMItransformationTask(Map.Entry<Profile,List<Profile>> entry){
+            this.entry = entry;
+        }
+
+        @Override
+        public Document call() {
+
+            return singleTransformation(entry);
+
+        }
+    }
+
+
+    protected Document singleTransformation(Map.Entry<Profile,List<Profile>> entry){
+        Profile key = entry.getKey();
+        try {
+            Document resulting_xmi ;
+
+            Profile EQBD = null;
+            Profile TPBD = null;
+            List<String> sv_sn = new ArrayList<>();
+
+            Profile EQ = null;
+            Profile SSH = null;
+            Profile TP = null;
+
+            sv_sn.add(getSimpleNameNoExt(key));
+
+            for(Profile value : entry.getValue()){
+                switch (value.type){
+                    case EQ:
+                        EQ = value;
+                        break;
+                    case TP:
+                        TP = value;
+                        break;
+                    case SSH:
+                        SSH = value;
+                        break;
+                    case EQBD:
+                        EQBD = value;
+                        break;
+                    case TPBD:
+                        TPBD = value;
+                        break;
+                }
+            }
+
+            CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(EQ,TP,SSH,key, sv_sn.get(0));
+
+            if(!xmlConsistency.isExcluded()){
+                Document merged_xml = createMerge(key, EQBD,TPBD, TransformationUtils.getBusinessProcess(key.xml_name), key, EQ, SSH, TP,
+                        XGMPreparationUtils.defaultBDIds);
+                resulting_xmi = createXmi(key, merged_xml);
+                logger.info("Transformed:\t"+key.xml_name);
+                isNB.remove(key); //FIXME: not clean
+                isShortCircuit.remove(key); //FIXME: not clean
+                return resulting_xmi;
+            }
+            else{
+                logger.info("Xmi not created for "+key.xml_name+". Probably basic xml/rdf consistency is broken.");
+            }
+
+            return null;
+        } catch (Exception e){
+            logger.severe("Error in processing: "+ key.xml_name);
+            throw new RuntimeException(e);
+        }
+
+    }
+
+
+    /*****************************************************************************************************************/
 
     /**
      *
@@ -186,7 +304,7 @@ public class TransformationService extends BasicService implements Transformatio
      * @throws ParserConfigurationException
      * @throws SAXException
      */
-    private void parseBdExtensions() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
+    private void parseBdExtensions() throws IOException, ParserConfigurationException, SAXException {
         Node[] bdExts = convertToArray(getNodeList(new File(Configuration.configs.get("bdExtensions"))));
 
         for (Node bdExt : bdExts) {
@@ -233,115 +351,6 @@ public class TransformationService extends BasicService implements Transformatio
         }
     }
 
-    /*****************************************************************************************************************/
-
-    @Override
-    public void enqueueForTransformation(HashMap<Profile, List<Profile>> xGM) {
-
-        HashMap<Profile, Future<Document>> XMIs = new HashMap<>();
-
-        for (Map.Entry<Profile,List<Profile>> entry: xGM.entrySet()) {
-            logger.info("Transforming:\t" + entry.getKey().xml_name);
-            Future<Document> xmi = executorService.submit(new XMItransformationTask(entry));
-            XMIs.put(entry.getKey(), xmi);
-
-            //FIXME
-            printPoolSize();
-        }
-
-        processResults(XMIs);
-
-    }
-
-    private void processResults(HashMap<Profile, Future<Document>> XMIs){
-
-        XMIs.entrySet().parallelStream().forEach(entry->{
-            try{
-                String key = entry.getKey().xml_name;
-                logger.info("XMI ready for:\t "+ key);
-
-                //DEBUG
-                //TransformationUtils.printDocument(entry.getValue().get(), entry.getKey().xml_name+"_xmi.xml");
-                validationListener.enqueueForValidation(entry.getKey(), entry.getValue().get());
-
-            } catch (InterruptedException | ExecutionException e){
-                e.printStackTrace();
-            }
-        });
-
-    }
-
-
-
-    private class XMItransformationTask implements Callable {
-
-        private Map.Entry<Profile,List<Profile>> entry;
-
-        private XMItransformationTask(Map.Entry<Profile,List<Profile>> entry){
-            this.entry = entry;
-        }
-
-        @Override
-        public Document call() {
-
-            Profile key = entry.getKey();
-            try {
-                Document resulting_xmi ;
-
-                Profile EQBD = null;
-                Profile TPBD = null;
-                List<String> sv_sn = new ArrayList<>();
-
-                Profile EQ = null;
-                Profile SSH = null;
-                Profile TP = null;
-
-                sv_sn.add(getSimpleNameNoExt(key));
-
-                for(Profile value : entry.getValue()){
-                    switch (value.type){
-                        case EQ:
-                            EQ = value;
-                            break;
-                        case TP:
-                            TP = value;
-                            break;
-                        case SSH:
-                            SSH = value;
-                            break;
-                        case EQBD:
-                            EQBD = value;
-                            break;
-                        case TPBD:
-                            TPBD = value;
-                            break;
-                    }
-                }
-
-                CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(EQ,TP,SSH,key, sv_sn.get(0));
-
-                if(!xmlConsistency.isExcluded()){
-                    Document merged_xml = createMerge(EQBD,TPBD, TransformationUtils.getBusinessProcess(key.xml_name), key, EQ, SSH, TP,
-                            XGMPreparationUtils.defaultBDIds);
-                    resulting_xmi = createXmi(merged_xml);
-                    logger.info("Transformed:\t"+key.xml_name);
-
-                    //xmi_map.put(sv_sn.get(0),resulting_xmi);
-                    return resulting_xmi;
-                }
-                else{
-                    logger.info("Xmi not created for "+key.xml_name+". Probably basic xml/rdf consistency is broken.");
-                }
-
-                return null;
-            } catch (Exception e){
-                logger.severe("Error in processing: "+ key.xml_name);
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-
     /**
      *
      * @param eqbd
@@ -358,7 +367,7 @@ public class TransformationService extends BasicService implements Transformatio
      * @throws SAXException
      * @throws TransformerException
      */
-    public synchronized Document createMerge(Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
+    public synchronized Document createMerge(Profile key,Profile eqbd, Profile tpbd, String business, Profile SV, Profile EQ, Profile SSH, Profile TP, List<String> defaultBDIds) throws ParserConfigurationException, IOException, SAXException, TransformerException {
 
         NodeList nodeListeq = correctDeps(getNodeList(EQ), EQ.DepToBeReplaced,defaultBDIds.get(0));
 
@@ -368,7 +377,10 @@ public class TransformationService extends BasicService implements Transformatio
         NodeList nodeListEqBd = getNodeList(eqbd);
         NodeList nodeListTpBd = getNodeList(tpbd);
         //FIXME!
-        //isNb = isNb(nodeListeq);
+        boolean isNb = isNb(nodeListeq);
+        isNB.put(key,isNb);
+        isShortCircuit.put(key,isShortCircuit(nodeListeq));
+
         Document target = nodeListeq.item(0).getOwnerDocument();
         target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/","xmlns:brlnd","http://brolunda.com/ecore-converter#" );
         target.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp","http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
@@ -677,7 +689,7 @@ public class TransformationService extends BasicService implements Transformatio
      * @throws IOException
      * @throws TransformerException
      */
-    public Document createXmi(Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
+    public Document createXmi(Profile key, Document target) throws URISyntaxException, ParserConfigurationException, SAXException, IOException, TransformerException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
         HashMap<String,String> sub = parseEcoreXmi();
@@ -723,8 +735,8 @@ public class TransformationService extends BasicService implements Transformatio
         xmi.getDocumentElement().setAttribute("local_level_validation", "true");
         xmi.getDocumentElement().setAttribute("global_level_validation", "true");
         xmi.getDocumentElement().setAttribute("emf_level_validation", "true");
-        xmi.getDocumentElement().setAttribute("isEQoperation", Boolean.toString(isNb));
-        xmi.getDocumentElement().setAttribute("isEQshortCircuit", Boolean.toString(isShortCircuit));
+        xmi.getDocumentElement().setAttribute("isEQoperation", Boolean.toString(isNB.get(key)));
+        xmi.getDocumentElement().setAttribute("isEQshortCircuit", Boolean.toString(isShortCircuit.get(key)));
 
         for (Node basic : basics) {
             if(!StringUtils.isEmpty(basic.getLocalName())){
@@ -1158,6 +1170,51 @@ public class TransformationService extends BasicService implements Transformatio
                 }
             }
         }
+    }
+
+    /**
+     *
+     * @param type
+     * @param nodeList
+     * @return
+     */
+    private boolean isEQType(String type, NodeList nodeList){
+        boolean type_ok = false;
+        NodeList fullmodel = nodeList.item(0).getOwnerDocument().getElementsByTagName("md:FullModel");for(int i=0; i<fullmodel.getLength();i++){
+            if(fullmodel.item(i).getLocalName()!=null){
+                if(fullmodel.item(i).hasChildNodes()){
+                    NodeList childs = fullmodel.item(i).getChildNodes();
+                    for(int c=0;c<childs.getLength();c++){
+                        if(childs.item(c).getLocalName()!=null){
+                            String localName= childs.item(c).getLocalName();
+                            if(localName.contains("Model.profile")){
+                                type_ok = childs.item(c).getTextContent().contains(type);
+                            }
+
+                        }
+                    }
+                }
+            }
+        }
+        return type_ok;
+    }
+
+    /**
+     *
+     * @param nodeList
+     * @return
+     */
+    private boolean isShortCircuit(NodeList nodeList){
+        return isEQType("EquipmentShortCircuit", nodeList);
+    }
+
+    /**
+     *
+     * @param nodeList
+     * @return
+     */
+    private boolean isNb(NodeList nodeList){
+        return isEQType("EquipmentOperation", nodeList);
     }
 
     /**

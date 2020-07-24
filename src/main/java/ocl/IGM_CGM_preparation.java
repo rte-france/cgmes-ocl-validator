@@ -22,8 +22,17 @@ import org.xml.sax.SAXException;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -177,7 +186,7 @@ public class IGM_CGM_preparation {
      * @throws SAXException
      * @throws IOException
      */
-    private void checkConsistency() throws ParserConfigurationException, SAXException, IOException {
+    private void checkConsistency() throws IOException {
         boolean BDParsed = false;
         List<Profile> defaultBDs = new ArrayList<>();
         Iterator<Map.Entry<Profile,List<Profile>>> it = IGM_CGM.entrySet().iterator();

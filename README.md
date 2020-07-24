@@ -51,6 +51,9 @@ The installation package contains has the following structure:
 
 ----- validate.sh
 
+----- startValidationDeamon.bat
+
+----- startValidationDeamon.sh
 
 ## Configuration
 
@@ -68,23 +71,49 @@ and
 
 https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/UMLRestrictionRules.xml
 
+
 ## Usage
-###  Windows users
+
+### Stand-alone mode
+
+####  Windows users
 Run the following script
 `validate.bat
 `
-### Linux users
+#### Linux users
 Run the following script
 `validate.sh
 `
-
 In both cases, during the execution, logs will be displayed on the screen.
-The output of the CGMES file analysis is stored in an **Excel sheet** under the directory `inputs`. This xls file contains one sheet per IGM. 
+The output of the CGMES file analysis is stored in an **Excel sheet** under the directory `reports`. This xls file contains one sheet per IGM. 
 
 For each IGM are reported: 
 - the name of the violated rule, 
 - the object class it applies to and 
 - the rdf:id (and when possible the name) of the object instances it refers to.
+
+### Deamon mode
+
+We provide another mode of generation of reports, which aims at dealing with flows of data rather than static content of a directory
+
+####  Windows users
+Run the following script
+`startValidationDeamon.bat
+`
+#### Linux users
+Run the following script
+`startValidationDeamon.sh
+`
+
+The program is going to monitor the `inputs` directory.
+
+Each time there is a new profile instance, it will analyse it, wait for new inputs until there is a full IGM, then for this IGM the several steps of validation are triggered and two reports are created - the XLS one as for the stand-alone mode, and an XML report, similar to the one that the ENTSO-E quality portal displays.
+
+The program works as a deamon (service), which means it stops only when the script is interrupted.
+
+Remark. This solution can for example be plugged on the file system interface of OPDE to automatically check incoming data.
+
+
 
 ## Disclaimer
 

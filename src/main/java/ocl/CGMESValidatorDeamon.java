@@ -72,8 +72,6 @@ public class CGMESValidatorDeamon {
         new Thread(transformationService).start();
         new Thread(validationService).start();
         new Thread(reportingService).start();
-
-
     }
 
     private void cleanupServices(){

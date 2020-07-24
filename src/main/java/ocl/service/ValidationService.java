@@ -60,7 +60,7 @@ public class ValidationService extends BasicService implements ValidationListene
     }
 
 
-    private List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
+    public List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
 
         List<EvaluationResult> results = new ArrayList<>();
         if (diagnostics==null) return results;
@@ -127,7 +127,7 @@ public class ValidationService extends BasicService implements ValidationListene
     }
 
 
-    private Diagnostic evaluate(InputStream inputStream){
+    public Diagnostic evaluate(InputStream inputStream){
 
         ResourceSet resourceSet = ValidationUtils.createResourceSet();
 

@@ -20,9 +20,9 @@ import com.google.gson.reflect.TypeToken;
 import ocl.service.util.Configuration;
 import ocl.service.util.TransformationUtils;
 import ocl.service.util.ValidationUtils;
-import ocl.service.util.XGMPreparationUtils;
 import ocl.service.util.XLSReportWriter;
-import ocl.util.*;
+import ocl.util.EvaluationResult;
+import ocl.util.RuleDescription;
 import org.apache.commons.io.IOCase;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
@@ -30,15 +30,26 @@ import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.*;
-import java.io.*;
+import java.io.File;
+import java.io.FileFilter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Type;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -80,12 +91,9 @@ public class OCLEvaluator {
             e.printStackTrace();
         }
 
-        try {
-            xmi_list= my_transf.convertData(my_prep.IGM_CGM, XGMPreparationUtils.defaultBDIds);
-            LOGGER.info("XMI transformation done!");
-        } catch (TransformerException | ParserConfigurationException | SAXException | URISyntaxException | IOException e) {
-            e.printStackTrace();
-        }
+        xmi_list= my_transf.convertData(my_prep.IGM_CGM);
+        LOGGER.info("XMI transformation done!");
+
         HashMap<String, Integer> ruleLevels = my_transf.getRuleLevels();
 
         my_prep = null; // save memory
