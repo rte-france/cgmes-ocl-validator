@@ -91,6 +91,9 @@ public class XMLReportWriter implements ReportWriter {
             igm.setTso(meta[2]);
             igm.setVersion(new Integer(meta[4]));
             igm.setValidationParameters(igmValidationParameters);
+            // resource
+            igm.getResource().add(p.id);
+            igm.getResource().addAll(p.depOn);
             List<RuleViolation> violatedRules = getViolatedRules(p, results, rules);
             igm.getRuleViolation().addAll(violatedRules);
             igm.setQualityIndicator(getQualityIndicator(results));

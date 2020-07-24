@@ -17,6 +17,7 @@ package ocl.service;
 import ocl.Profile;
 import ocl.service.util.XGMPreparationUtils;
 import ocl.util.IOUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -269,7 +270,13 @@ public class WatchingService extends BasicService {
                 long minExpiration = min(expirationTimes.values());
                 long timeout = minExpiration-currentTime;
                 logger.fine("Timeout: "+timeout);
+
+                // workaround for Windows as poll does not respect the timeout
+                if (SystemUtils.IS_OS_WINDOWS){
+                    Thread.currentThread().sleep(timeout);
+                }
                 key = watcher.poll(timeout, TimeUnit.MILLISECONDS);
+
             }
         }
     }
