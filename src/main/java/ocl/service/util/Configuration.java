@@ -34,6 +34,9 @@ public class Configuration {
     public static Boolean debugMode = false;
     public static int batchSize = 2;
 
+    public static Boolean generateXMLreports = true;
+    public static Boolean generateXLSreports = true;
+
     public static HashMap<String,String> configs = null;
 
     static Logger logger = null;
@@ -83,6 +86,9 @@ public class Configuration {
         String cacheDir_= properties.getProperty("cacheDir");
         String batchSize_=properties.getProperty("batchSize");
 
+        String xmlreport = properties.getProperty("generateXMLreports");
+        String xlsreport = properties.getProperty("generateXLSreports");
+
         if (basic_model!=null && ecore_model!=null){
             configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
             configs.put("ecore_model", IOUtils.resolveEnvVars(ecore_model));
@@ -100,11 +106,10 @@ public class Configuration {
             System.exit(0);
         }
 
-        if(debug!=null){
-            if(debug.equalsIgnoreCase("TRUE")){
-                debugMode = true;
-            }
-        }
+        if (debug!=null) debugMode = debug.equalsIgnoreCase("TRUE");
+        if (xlsreport != null) generateXLSreports = xlsreport.equalsIgnoreCase("TRUE");
+        if (xmlreport != null) generateXMLreports = xmlreport.equalsIgnoreCase("TRUE");
+
 
         if(cacheDir_!=null ){
             try{

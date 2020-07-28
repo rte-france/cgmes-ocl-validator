@@ -58,8 +58,8 @@ public class ReportingService extends BasicService implements ReportingListener{
     @Override
     public void enqueueForReporting(Profile p, List<EvaluationResult> errors) {
 
-        executorService.submit(new ExcelReportingTask(p, errors));
-        executorService.submit(new XmlReportingTask(p, errors));
+        if (Configuration.generateXLSreports) executorService.submit(new ExcelReportingTask(p, errors));
+        if (Configuration.generateXMLreports) executorService.submit(new XmlReportingTask(p, errors));
 
         // debug: display pool size
         if (Configuration.debugMode)

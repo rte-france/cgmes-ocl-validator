@@ -198,7 +198,6 @@ public class ValidationService extends BasicService implements ValidationListene
                 logger.severe("Cannot validate:\t" + key);
             else {
                 logger.info("Validated:\t" + key);
-                System.gc();
 
                 reportingListener.enqueueForReporting(p, res);
             }
