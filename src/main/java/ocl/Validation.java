@@ -15,6 +15,7 @@ import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
 import org.eclipse.emf.ecore.util.Diagnostician;
+import org.eclipse.emf.ecore.xmi.IllegalValueException;
 import org.eclipse.emf.ecore.xmi.XMLResource;
 import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
 import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
@@ -147,6 +148,17 @@ public class Validation {
         Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
         try {
             model.load(inputStream,options);
+        } catch (Resource.IOWrappedException we){
+            Exception exc = we.getWrappedException();
+            if (exc instanceof IllegalValueException){
+                IllegalValueException ive = (IllegalValueException) exc;
+                EObject object = ive.getObject();
+                String n = (object.eClass().getEStructuralFeature("name") != null) ? (" "+object.eGet(object.eClass().getEStructuralFeature("name"))+" ") : "";
+                String id =  (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null;
+                LOGGER.severe("Problem with: " + id + n + " (value:" + ive.getValue().toString() + ")");
+            }
+            LOGGER.severe(exc.getMessage());
+            return null;
         } catch (IOException e) {
             e.printStackTrace();
             return null;
