@@ -198,8 +198,9 @@ public class ValidationService extends BasicService implements ValidationListene
                 logger.severe("Cannot validate:\t" + key);
             else {
                 logger.info("Validated:\t" + key);
+                System.gc();
 
-                reportingListener.enqueueForReporting(p, results.get());
+                reportingListener.enqueueForReporting(p, res);
             }
 
         } catch (InterruptedException | ExecutionException e){
@@ -228,9 +229,11 @@ public class ValidationService extends BasicService implements ValidationListene
                 if (diagnostic == null)
                     return null;
                 List<EvaluationResult> res = getErrors(diagnostic, ValidationUtils.rules);
+                xmlStream.close();
+                xmlStream = null; // to free memory
 
                 return res;
-            } catch (TransformerException e){
+            } catch (IOException | TransformerException e){
                 e.printStackTrace();
                 //FIXME: ???
             }

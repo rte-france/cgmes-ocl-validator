@@ -127,10 +127,13 @@ public class XMLReportWriter implements ReportWriter {
         List<RuleViolation> violatedRules = new ArrayList<>();
         for (EvaluationResult res : results){
             String infringedRule = res.getRule();
-            String severity = "UNKNOWN";
-            if (rules.get(infringedRule) != null)
+            String severity = "WARNING";
+            String message = "";
+            if (rules.get(infringedRule) != null) {
                 severity = rules.get(infringedRule).getSeverity();
-            String message = res.getSpecificMessage() != null ? rules.get(infringedRule).getMessage() + " " + res.getSpecificMessage() : rules.get(infringedRule).getMessage();
+                message = res.getSpecificMessage() != null ? rules.get(infringedRule).getMessage() + " " + res.getSpecificMessage() : rules.get(infringedRule).getMessage();
+                if (message==null) message="";
+            }
             int level = (res.getLevel() == null)?0:res.getLevel();
             String id = (res.getId()==null)?"":res.getId();
             String name = (res.getName()==null)?"":res.getName();

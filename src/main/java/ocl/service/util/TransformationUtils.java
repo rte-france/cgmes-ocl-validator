@@ -172,10 +172,11 @@ public class TransformationUtils {
     }
 
 
-    public static InputStream toInputStream(Document doc) throws TransformerException {
+    public static InputStream toInputStream(Document doc) throws TransformerException, IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         Source xmlSource = new DOMSource(doc);
         Result outputTarget = new StreamResult(outputStream);
+        outputStream.close();
         TransformerFactory.newInstance().newTransformer().transform(xmlSource, outputTarget);
         InputStream is = new ByteArrayInputStream(outputStream.toByteArray());
         return is;

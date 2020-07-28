@@ -135,6 +135,7 @@ public class XLSReportWriter implements ReportWriter {
                 FileOutputStream outputStream = new FileOutputStream(path + File.separator + key + ".xlsx");
                 workbook.write(outputStream);
                 workbook.close();
+                outputStream.close();
             } catch (Exception e) {
                 logger.severe("Excel creation failed for " + key);
                 e.printStackTrace();
@@ -222,6 +223,7 @@ public class XLSReportWriter implements ReportWriter {
             FileOutputStream outputStream = new FileOutputStream(path);
             workbook.write(outputStream);
             workbook.close();
+            outputStream.close();
             logger.info("Excel created: " + path);
         } catch (Exception e) {
             logger.severe("Debug Excel creation failed");

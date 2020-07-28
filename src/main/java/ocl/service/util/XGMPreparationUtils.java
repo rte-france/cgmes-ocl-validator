@@ -93,11 +93,13 @@ public class XGMPreparationUtils {
                     InputStream xmlStream = zip.getInputStream(entry);
                     try {
                         saxParser.parse(xmlStream, handler);
-                    }catch (DependencyHandler.DoneParsingException e){
+                    } catch (DependencyHandler.DoneParsingException e){
 
-                    }catch (SAXException e){
+                    } catch (SAXException e){
                         logger.severe("Problem with header processing when reordering");
                         throw new IOException(e);
+                    } finally{
+                        xmlStream.close();
                     }
                     if ((Profile.getType(entry.getName()) == Profile.Type.EQBD) || (Profile.getType(entry.getName()) == Profile.Type.TPBD)){
                         Profile profile = new Profile(Profile.getType(entry.getName()), handler.getMyId(), handler.getMyDepOn(), file, entry.getName(),handler.getModelProfile());
@@ -121,6 +123,7 @@ public class XGMPreparationUtils {
             logger.severe("Default boundary location not specified!");
             System.exit(0);
         }
+        config.close();
         return defaultBDs;
     }
 

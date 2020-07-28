@@ -25,7 +25,7 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.logging.Logger;
 
-public class CGMESValidatorDeamon {
+public class CGMESValidatorDaemon {
 
     private static Logger logger = null;
     static {
@@ -42,7 +42,7 @@ public class CGMESValidatorDeamon {
     private ValidationService validationService;
     private ReportingService reportingService;
 
-    public CGMESValidatorDeamon(Path path){
+    public CGMESValidatorDaemon(Path path){
         this.inputPath = path;
 
     }
@@ -82,7 +82,7 @@ public class CGMESValidatorDeamon {
     public static void main(String args[]) {
         Locale.setDefault(new Locale("en", "EN"));
 
-        CGMESValidatorDeamon deamon = new CGMESValidatorDeamon(Configuration.inputDir);
+        CGMESValidatorDaemon deamon = new CGMESValidatorDaemon(Configuration.inputDir);
 
         if (Configuration.debugMode)
             logger.info("Validator deamon running in debug mode");
