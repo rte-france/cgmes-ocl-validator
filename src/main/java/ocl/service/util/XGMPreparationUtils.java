@@ -124,6 +124,17 @@ public class XGMPreparationUtils {
         return defaultBDs;
     }
 
+
+    public static void readZips(File files, Set SVProfiles, Set otherProfiles, Set BDProfiles) throws IOException {
+        FileFilter fileFilter = new WildcardFileFilter("*.zip", IOCase.INSENSITIVE);
+        File[] listOfFiles = files.listFiles(fileFilter);
+        if (listOfFiles == null) return;
+        for (File f: listOfFiles) {
+            readZip(f, SVProfiles, otherProfiles, BDProfiles);
+        }
+    }
+
+
     public static void readZip(File file, Set SVProfiles, Set otherProfiles, Set BDProfiles) throws IOException {
 
             ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
@@ -157,7 +168,8 @@ public class XGMPreparationUtils {
                         case SSH:
                             otherProfiles.add(profile);
                             break;
-                        case other:
+                        case EQBD:
+                        case TPBD:
                             BDProfiles.add(profile);
                     }
 
@@ -213,7 +225,7 @@ public class XGMPreparationUtils {
                     Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.id.equals(EQdep)).findAny();
                     if(matchingObject.isPresent()){
                         switch (matchingObject.get().type){
-                            case other:
+                            case EQBD:
                                 EQBDs.add(matchingObject.get());
                                 break;
                         }
@@ -228,7 +240,7 @@ public class XGMPreparationUtils {
                 Optional<Profile> matchingObject = BDProfiles.stream().filter(p->p.depOn.equals(eqbd_id)).findAny();
                 if(matchingObject.isPresent()){
                     switch (matchingObject.get().type){
-                        case other:
+                        case TPBD:
                             TPBDs.add(matchingObject.get());
                             break;
                     }
@@ -271,7 +283,8 @@ public class XGMPreparationUtils {
                     case SSH:
                         NumSSHs++;
                         break;
-                    case other:
+                    case EQBD:
+                    case TPBD:
                         NumBDs++;
                         break;
                 }

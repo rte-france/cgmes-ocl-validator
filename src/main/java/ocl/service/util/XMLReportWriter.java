@@ -112,7 +112,7 @@ public class XMLReportWriter implements ReportWriter {
             };
             marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", mapper);
 
-            Path outputFile = path.resolve("QAS_"+p.xml_name);
+            Path outputFile = path.resolve("QAR_"+p.xml_name);
             marshaller.marshal(new JAXBElement<QAReport>(new QName(NAMESPACE_QAR, "QAReport"), QAReport.class, report), outputFile.toFile());
 
             //FIXME: solve problems with namespace!

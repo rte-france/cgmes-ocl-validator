@@ -140,8 +140,14 @@ public class TransformationService extends BasicService implements Transformatio
                 String key = entry.getKey().xml_name;
                 logger.info("XMI ready for:\t "+ key);
 
-                //DEBUG
-                //TransformationUtils.printDocument(entry.getValue().get(), entry.getKey().xml_name+"_xmi.xml");
+                //DEBUG: print XMI to disk
+                /*
+                try {
+                    TransformationUtils.printDocument(entry.getValue().get(), entry.getKey().xml_name + "_xmi.xml");
+                } catch (TransformerException e){
+                    e.printStackTrace();
+                }
+                */
                 validationListener.enqueueForValidation(entry.getKey(), entry.getValue().get());
 
             } catch (InterruptedException | ExecutionException e){

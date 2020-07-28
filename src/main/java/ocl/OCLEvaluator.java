@@ -20,6 +20,7 @@ import com.google.gson.reflect.TypeToken;
 import ocl.service.util.Configuration;
 import ocl.service.util.TransformationUtils;
 import ocl.service.util.ValidationUtils;
+import ocl.service.util.XGMPreparationUtils;
 import ocl.service.util.XLSReportWriter;
 import ocl.util.EvaluationResult;
 import ocl.util.RuleDescription;
@@ -42,13 +43,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -71,6 +75,11 @@ public class OCLEvaluator {
     }
 
 
+    private Set<Profile> SVProfiles = Collections.synchronizedSet(new HashSet<>());
+    private Set<Profile> otherProfiles = Collections.synchronizedSet(new HashSet<>());
+    private Set<Profile> BDProfiles = Collections.synchronizedSet(new HashSet<>());
+    private HashMap<Profile,List<Profile>> IGM_CGM = new HashMap<>();
+
     /**
      *
      * @param where
@@ -79,24 +88,27 @@ public class OCLEvaluator {
     private Map<String, List<EvaluationResult>> assessRules(Path where) throws IOException {
         Map<String, List<EvaluationResult>> results = new HashMap<>();
 
-        IGM_CGM_preparation my_prep = new IGM_CGM_preparation();
         XMITransformation my_transf = new XMITransformation();
 
         HashMap<String, Document> xmi_list = new HashMap<>();
         Configuration.cacheDir.toFile().mkdirs();
         try {
-            my_prep.readZip(where.toFile());
+            XGMPreparationUtils.readZips(where.toFile(), SVProfiles, otherProfiles, BDProfiles);
+            // trigger assembly
+            XGMPreparationUtils.reorderModels(SVProfiles, otherProfiles, BDProfiles, IGM_CGM);
+            // check if models are complete
+            XGMPreparationUtils.checkConsistency(IGM_CGM);
             LOGGER.info("Reordering done!");
-        } catch (ParserConfigurationException | SAXException | IOException e) {
+        } catch (IOException | ParserConfigurationException | SAXException e) {
             e.printStackTrace();
         }
 
-        xmi_list= my_transf.convertData(my_prep.IGM_CGM);
+        xmi_list= my_transf.convertData(IGM_CGM);
+
         LOGGER.info("XMI transformation done!");
 
         HashMap<String, Integer> ruleLevels = my_transf.getRuleLevels();
 
-        my_prep = null; // save memory
         my_transf = null ; // save memory
 
         List<String> files = new ArrayList<>();
