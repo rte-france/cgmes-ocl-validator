@@ -15,15 +15,18 @@
 package ocl.service;
 
 import ocl.Profile;
+import ocl.service.util.Configuration;
 import ocl.service.util.ValidationUtils;
 import ocl.util.EvaluationResult;
 import ocl.util.RuleDescription;
 import org.eclipse.emf.common.util.Diagnostic;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.common.util.URI;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.ecore.resource.ResourceSet;
 import org.eclipse.emf.ecore.util.Diagnostician;
+import org.eclipse.emf.ecore.xmi.IllegalValueException;
 import org.eclipse.emf.ecore.xmi.XMLResource;
 import org.w3c.dom.Document;
 
@@ -137,6 +140,18 @@ public class ValidationService extends BasicService implements ValidationListene
         Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
         try {
             model.load(inputStream,options);
+        } catch (Resource.IOWrappedException we){
+            Exception exc = we.getWrappedException();
+            if (exc instanceof IllegalValueException){
+                IllegalValueException ive = (IllegalValueException) exc;
+                EObject object = ive.getObject();
+                String name = (object.eClass().getEStructuralFeature("name") != null) ? (" "+object.eGet(object.eClass().getEStructuralFeature("name"))+" ") : "";
+                String id =  (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null;
+                logger.severe("Problem with: " + id + name + " (value:" + ive.getValue().toString() + ")");
+            }
+            if (Configuration.debugMode) exc.printStackTrace();
+            else logger.severe(exc.getMessage());
+            return null;
         } catch (IOException e) {
             e.printStackTrace();
             return null;
@@ -173,14 +188,19 @@ public class ValidationService extends BasicService implements ValidationListene
 
         Future<List<EvaluationResult>> results = executorService.submit(new ValidationTask(xmi));
 
-        //FIXME
-        printPoolSize();
+        // debug: display pool size
+        if (Configuration.debugMode)
+            printPoolSize();
 
         try {
             List<EvaluationResult> res = results.get();
-            logger.info("Validated:\t" + key + res.size());
+            if (res == null)
+                logger.severe("Cannot validate:\t" + key);
+            else {
+                logger.info("Validated:\t" + key);
 
-            reportingListener.enqueueForReporting(p, results.get());
+                reportingListener.enqueueForReporting(p, results.get());
+            }
 
         } catch (InterruptedException | ExecutionException e){
             e.printStackTrace();
@@ -205,6 +225,8 @@ public class ValidationService extends BasicService implements ValidationListene
 
                 Diagnostic diagnostic = evaluate(xmlStream);
 
+                if (diagnostic == null)
+                    return null;
                 List<EvaluationResult> res = getErrors(diagnostic, ValidationUtils.rules);
 
                 return res;

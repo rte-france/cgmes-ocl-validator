@@ -79,10 +79,13 @@ public class CGMESValidatorDeamon {
     }
 
 
-    public static void main(String args[]){
+    public static void main(String args[]) {
         Locale.setDefault(new Locale("en", "EN"));
 
         CGMESValidatorDeamon deamon = new CGMESValidatorDeamon(Configuration.inputDir);
+
+        if (Configuration.debugMode)
+            logger.info("Validator deamon running in debug mode");
 
         // initialization of services
         try {

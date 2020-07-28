@@ -61,9 +61,9 @@ public class ReportingService extends BasicService implements ReportingListener{
         executorService.submit(new ExcelReportingTask(p, errors));
         executorService.submit(new XmlReportingTask(p, errors));
 
-
-        //FIXME
-        printPoolSize();
+        // debug: display pool size
+        if (Configuration.debugMode)
+            printPoolSize();
 
     }
 

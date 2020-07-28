@@ -285,9 +285,7 @@ public class OCLEvaluator {
 
     private void writeDebugReports(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, Path path){
         XLSReportWriter writer = new XLSReportWriter();
-        if(Configuration.debugMode)
-            writer.writeUnknownRulesReport(synthesis,rules,path.toFile());
-
+        writer.writeUnknownRulesReport(synthesis,rules,path.toFile());
     }
 
     class Task implements Runnable
@@ -323,7 +321,8 @@ public class OCLEvaluator {
             evaluator.writeExcelReport(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("excelResults"));
 
             //writeDocument debug report
-            evaluator.writeDebugReports(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("DebugReport.xlsx"));
+            if(Configuration.debugMode)
+                evaluator.writeDebugReports(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("DebugReport.xlsx"));
             evaluator.cleanCache();
 
         } catch (IOException e){

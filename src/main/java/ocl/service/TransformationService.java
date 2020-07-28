@@ -125,8 +125,9 @@ public class TransformationService extends BasicService implements Transformatio
             Future<Document> xmi = executorService.submit(new XMItransformationTask(entry));
             XMIs.put(entry.getKey(), xmi);
 
-            //TODO: add this only if debug mode
-            printPoolSize();
+            // debug: display pool size
+            if (Configuration.debugMode)
+                printPoolSize();
         }
 
         processResults(XMIs);
