@@ -14,6 +14,7 @@
  **/
 package ocl.service.util;
 
+import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
 import ocl.Profile;
 import ocl.service.reporting.xml.IGM;
 import ocl.service.reporting.xml.IGMValidationParameters;
@@ -43,6 +44,8 @@ import java.util.List;
 public class XMLReportWriter implements ReportWriter {
 
     // NB. to add generated sources in Intellij: right click on project folder, select maven and generate sources and update folders
+
+    private static String NAMESPACE_QAR = "http://entsoe.eu/checks";
 
     private JAXBContext context;
     private Marshaller marshaller;
@@ -100,9 +103,17 @@ public class XMLReportWriter implements ReportWriter {
             report.getIGM().add(igm);
 
             // create report
-            //marshaller.marshal(report, System.out);
+            NamespacePrefixMapper mapper = new NamespacePrefixMapper() {
+                public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
+                    if (NAMESPACE_QAR.equals(namespaceUri) && !requirePrefix)
+                        return "";
+                    return "ns";
+                }
+            };
+            marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", mapper);
+
             Path outputFile = path.resolve("QAS_"+p.xml_name);
-            marshaller.marshal(new JAXBElement<QAReport>(new QName("entso-e", "QAReport"), QAReport.class, report), outputFile.toFile());
+            marshaller.marshal(new JAXBElement<QAReport>(new QName(NAMESPACE_QAR, "QAReport"), QAReport.class, report), outputFile.toFile());
 
             //FIXME: solve problems with namespace!
         } catch (Exception e) {
