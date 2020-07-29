@@ -18,22 +18,24 @@ import ocl.Profile;
 import ocl.util.EvaluationResult;
 import ocl.util.RuleDescription;
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static ocl.util.IOUtils.trimExtension;
 
@@ -45,10 +47,10 @@ public class XLSReportWriter implements ReportWriter {
      * @param color
      * @return
      */
-    private XSSFCellStyle coloredCell(XSSFWorkbook wb, Color color){
+    private XSSFCellStyle coloredCell(XSSFWorkbook wb, short color){
         XSSFCellStyle style1 = wb.createCellStyle();
-        style1.setFillForegroundColor(new XSSFColor(color));
-        style1.setFillPattern(CellStyle.SOLID_FOREGROUND);
+        style1.setFillForegroundColor(color);
+        style1.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         return style1;
     }
 
@@ -69,8 +71,8 @@ public class XLSReportWriter implements ReportWriter {
     public void writeSingleReport(String key, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) {
         try {
             XSSFWorkbook workbook = new XSSFWorkbook();
-            XSSFCellStyle redStyle = coloredCell(workbook, Color.RED);
-            XSSFCellStyle orangeStyle = coloredCell(workbook, Color.ORANGE);
+            XSSFCellStyle redStyle = coloredCell(workbook, IndexedColors.RED.getIndex());
+            XSSFCellStyle orangeStyle = coloredCell(workbook, IndexedColors.LIGHT_ORANGE.getIndex());
             XSSFSheet sheet = workbook.createSheet(key);
             int rowNum = 0;
             Row row = sheet.createRow(rowNum++);
@@ -180,7 +182,7 @@ public class XLSReportWriter implements ReportWriter {
      * @param path
      */
     public void writeUnknownRulesReport(Map<String, List<EvaluationResult>> synthesis, HashMap<String, RuleDescription> rules, File path){
-        Set<String> unknownRulesSet = new HashSet<String>();
+        Set<String> unknownRulesSet = new HashSet<>();
         for (String k : synthesis.keySet()){
             for (EvaluationResult res : synthesis.get(k)) {
                 String infringedRule = res.getRule();
