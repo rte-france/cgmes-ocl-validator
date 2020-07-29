@@ -16,6 +16,7 @@ package ocl.service;
 
 import ocl.Profile;
 import ocl.service.util.Configuration;
+import ocl.service.util.Priority;
 import ocl.service.util.ReportWriter;
 import ocl.service.util.ValidationUtils;
 import ocl.service.util.XMLReportWriter;
@@ -35,6 +36,8 @@ public class ReportingService extends BasicService implements ReportingListener{
     public ReportingService(){
 
         super();
+        priority = Priority.MEDIUM;
+
         try {
             if (Files.notExists(xlsReportsPath)){
                 Files.createDirectories(xlsReportsPath);
@@ -67,7 +70,7 @@ public class ReportingService extends BasicService implements ReportingListener{
 
     }
 
-    private class ReportingTask implements Runnable{
+    private class ReportingTask extends PriorityRunnable{
 
         protected Profile svProfile;
         protected List<EvaluationResult> validationResults;
@@ -75,13 +78,17 @@ public class ReportingService extends BasicService implements ReportingListener{
         protected Path path;
 
         ReportingTask(Profile p, List<EvaluationResult> results){
+            super(priority);
             this.svProfile = p;
             this.validationResults = results;
         }
 
         public void run()  {
             reportWriter.writeSingleReport(svProfile, validationResults, ValidationUtils.rules, path);
-            logger.info("Wrote report:\t" + svProfile.xml_name);
+            if (this instanceof ExcelReportingTask)
+                logger.info("Wrote XLS report for:\t" + svProfile.xml_name);
+            else if (this instanceof XmlReportingTask)
+                logger.info("Wrote XML report for:\t" + svProfile.xml_name);
         }
     }
 

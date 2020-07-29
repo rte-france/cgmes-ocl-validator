@@ -75,7 +75,7 @@ public class CGMESValidatorDaemon {
     }
 
     private void cleanupServices(){
-
+        logger.info("Shutting down services...");
     }
 
 
@@ -103,6 +103,12 @@ public class CGMESValidatorDaemon {
             // clean services
             deamon.cleanupServices();
         }
+
+        // register shutdown hook - called before JVM exits
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("Validation stopped");
+        }));
+
 
 
     }

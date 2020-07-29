@@ -16,6 +16,7 @@ package ocl.service;
 
 import ocl.Profile;
 import ocl.service.util.Configuration;
+import ocl.service.util.Priority;
 import ocl.service.util.TransformationUtils;
 import ocl.service.util.XGMPreparationUtils;
 import ocl.util.CheckXMLConsistency;
@@ -39,7 +40,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
@@ -75,6 +75,7 @@ public class TransformationService extends BasicService implements Transformatio
 
     public TransformationService(){
         super();
+        priority = Priority.HIGH;
         businessRelatedInitialization();
     }
 
@@ -158,11 +159,12 @@ public class TransformationService extends BasicService implements Transformatio
 
     }
 
-    private class XMItransformationTask implements Callable {
+    private class XMItransformationTask extends PriorityCallable {
 
         private Map.Entry<Profile,List<Profile>> entry;
 
         private XMItransformationTask(Map.Entry<Profile,List<Profile>> entry){
+            super(priority);
             this.entry = entry;
         }
 
@@ -216,7 +218,6 @@ public class TransformationService extends BasicService implements Transformatio
                 Document merged_xml = createMerge(key, EQBD,TPBD, TransformationUtils.getBusinessProcess(key.xml_name), key, EQ, SSH, TP,
                         XGMPreparationUtils.defaultBDIds);
                 resulting_xmi = createXmi(key, merged_xml);
-                logger.info("Transformed:\t"+key.xml_name);
                 isNB.remove(key); //FIXME: not clean
                 isShortCircuit.remove(key); //FIXME: not clean
                 return resulting_xmi;

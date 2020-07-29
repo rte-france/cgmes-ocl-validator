@@ -15,6 +15,7 @@
 package ocl.service;
 
 import ocl.Profile;
+import ocl.service.util.Priority;
 import ocl.service.util.XGMPreparationUtils;
 import ocl.util.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -72,6 +73,7 @@ public class WatchingService extends BasicService {
      */
     public WatchingService(Path dir) throws IOException {
         super();
+        priority = Priority.LOW;
 
         watcher = FileSystems.getDefault().newWatchService();
         keys = new HashMap<>();

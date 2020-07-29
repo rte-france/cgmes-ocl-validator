@@ -16,6 +16,7 @@ package ocl.service;
 
 import ocl.Profile;
 import ocl.service.util.Configuration;
+import ocl.service.util.Priority;
 import ocl.service.util.ValidationUtils;
 import ocl.util.EvaluationResult;
 import ocl.util.RuleDescription;
@@ -37,7 +38,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.regex.Matcher;
@@ -51,6 +51,7 @@ public class ValidationService extends BasicService implements ValidationListene
 
     public ValidationService(){
         super();
+        priority = Priority.HIGHEST;
 
     }
 
@@ -208,11 +209,12 @@ public class ValidationService extends BasicService implements ValidationListene
     }
 
 
-    private class ValidationTask implements Callable{
+    private class ValidationTask extends PriorityCallable{
 
         private Document xmi;
 
         private ValidationTask(Document xmi){
+            super(priority);
             this.xmi = xmi;
         }
 
