@@ -160,7 +160,7 @@ public class XLSReportWriter implements ReportWriter {
 
         if (Files.notExists(path)){
             try {
-                Files.createDirectory(path);
+                Files.createDirectories(path);
             } catch (IOException e){
                 e.printStackTrace();
             }
