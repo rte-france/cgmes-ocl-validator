@@ -26,7 +26,7 @@ Run the command `mvn clean package` to generate the jar file of the validation l
 ### Distributable library with dependencies
 
 Run the command `mvn clean install` to create a redistributable package containing the validator library with required dependencies and scripts to easily launch the validator. The fully packaged validator is stored in the `target` folder:
-`target/ocl_validator-1.1-bin.tar.gz` or `target/ocl_validator-1.1-bin.zip`
+`target/ocl_validator-3.0-bin.tar.gz` or `target/ocl_validator-3.0-bin.zip`
 
 ## How to run the validator
 
@@ -65,11 +65,8 @@ in the IGM if this is not the same. This process is similar to what OPDE does.
 - **important**: required validation rules are specified in a separare configuration files, it has to be stored into the `config` directory.
 These configuration files can be obtained from ENTSOe CGM BP group:
 
-https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/cgmes61970oclModel.ecore
+https://entsoe.sharefile.com/home/shared/foc0a777-e28e-45a2-a775-a517e1f8580a 
 
-and
-
-https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/UMLRestrictionRules.xml
 
 
 ## Usage

@@ -318,11 +318,11 @@ public class OCLEvaluator {
             Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(Configuration.inputDir);
 
             // writeDocument report
-            evaluator.writeExcelReport(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("excelResults"));
+            evaluator.writeExcelReport(synthesis, ValidationUtils.rules, Configuration.reportsDir.resolve("excelReports"));
 
             //writeDocument debug report
             if(Configuration.debugMode)
-                evaluator.writeDebugReports(synthesis, ValidationUtils.rules, Configuration.inputDir.resolve("DebugReport.xlsx"));
+                evaluator.writeDebugReports(synthesis, ValidationUtils.rules, Configuration.reportsDir.resolve("DebugReport.xlsx"));
             evaluator.cleanCache();
 
         } catch (IOException e){
