@@ -81,32 +81,32 @@ Run the following script
 Run the following script
 `validate.sh
 `
-In both cases, during the execution, logs will be displayed on the screen.
-The output of the CGMES file analysis is stored in an **Excel sheet** under the directory `reports`. This xls file contains one sheet per IGM. 
+During the execution, logs will be displayed on the screen.
+The output of CGMES file analysis is stored in an **Excel sheet** under the directory `reports`. This xls file contains one sheet per IGM. 
 
 For each IGM are reported: 
 - the name of the violated rule, 
 - the object class it applies to and 
 - the rdf:id (and when possible the name) of the object instances it refers to.
 
-### Deamon mode
+### Daemon mode
 
 We provide another mode of generation of reports, which aims at dealing with flows of data rather than static content of a directory
 
 ####  Windows users
 Run the following script
-`startValidationDeamon.bat
+`startValidationDaemon.bat
 `
 #### Linux users
 Run the following script
-`startValidationDeamon.sh
+`startValidationDaemon.sh
 `
 
 The program is going to monitor the `inputs` directory.
 
-Each time there is a new profile instance, it will analyse it, wait for new inputs until there is a full IGM, then for this IGM the several steps of validation are triggered and two reports are created - the XLS one as for the stand-alone mode, and an XML report, similar to the one that the ENTSO-E quality portal displays.
+Each time there is a new profile instance, it will analyse it, wait for new inputs until there is a full IGM, then for this IGM the several steps of validation are triggered and two reports are created - the XLS one as for the stand-alone mode, and an XML report, similar to the one that the ENTSO-E quality portal displays. It is possible to activate/deactivate one or the other of the report types in the configuration file `config/config.properties`.
 
-The program works as a deamon (service), which means it stops only when the script is interrupted.
+The program works as a daemon (service), which means it stops only when the script is interrupted.
 
 Remark. This solution can for example be plugged on the file system interface of OPDE to automatically check incoming data.
 
@@ -117,7 +117,7 @@ Remark. This solution can for example be plugged on the file system interface of
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Copyright
-&copy; RTE 2019
+&copy; RTE 2019-2020
 Authors: Marco Chiaramello, Jérôme Picault, Lars-Ola Gottfried Österlund
 
 ## License
