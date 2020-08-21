@@ -118,7 +118,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 ## Copyright
 &copy; RTE 2019-2020
-Authors: Marco Chiaramello, Jérôme Picault, Lars-Ola Gottfried Österlund
+Contributors: Marco Chiaramello, Jérôme Picault, Maria Hergueta Ortega, Thibaut Vermeulen, Lars-Ola Gottfried Österlund
 
 ## License
 Mozilla Public License 2.0
