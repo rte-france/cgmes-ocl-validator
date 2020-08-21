@@ -1,9 +1,24 @@
+/**
+ *       THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+ *       EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ *       OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+ *       SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ *       INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+ *       TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ *       BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ *       CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ *       ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+ *       DAMAGE.
+ *       (c) RTE 2019
+ *       Authors: Marco Chiaramello, Jerome Picault
+ **/
 package ocl.util;
 
 import com.google.gson.Gson;
-import ocl.OCLEvaluator;
 import ocl.Profile;
 
+import ocl.service.util.Configuration;
+import ocl.service.util.ValidationUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -20,15 +35,16 @@ import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class CheckXMLConsistency {
-
-    RuleDescriptionParser parser = new RuleDescriptionParser();
-    HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
 
     private boolean isExcluded = false;
     private String caseName;
@@ -80,9 +96,9 @@ public class CheckXMLConsistency {
         checkIDUniqueness(SV);
         List<EvaluationResult> results = new ArrayList<>();
         String ruleName = "IDuniqueness";
-        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
-        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-        String specificMessage= rules.get(ruleName) == null? "mRID (rdf:ID or rdf:about) not unique within model":null;
+        String severity = ValidationUtils.rules.get(ruleName) == null ? "UNKOWN" : ValidationUtils.rules.get(ruleName).getSeverity();
+        int level = ValidationUtils.rules.get(ruleName) == null ? 0 : ValidationUtils.rules.get(ruleName).getLevel();
+        String specificMessage= ValidationUtils.rules.get(ruleName) == null? "mRID (rdf:ID or rdf:about) not unique within model":null;
         for(IDUniqueness idUniqueness:idUniquenessList){
             EvaluationResult evaluationResult = new EvaluationResult(severity,
                     ruleName,
@@ -120,9 +136,7 @@ public class CheckXMLConsistency {
 
 
     public void writeJsonResults(List<EvaluationResult> results) throws IOException, URISyntaxException {
-
-        File cachedir = new File(OCLEvaluator.getConfig().get("cacheDir"));
-        OutputStream zipout = Files.newOutputStream(Paths.get(cachedir.getAbsolutePath()+File.separator+caseName+".json.zip"));
+        OutputStream zipout = Files.newOutputStream(Paths.get(Configuration.cacheDir.toAbsolutePath().toString()+File.separator+caseName+".json.zip"));
         ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
         String json = new Gson().toJson(results);
         ZipEntry entry_ = new ZipEntry(caseName + ".xmi.json"); // The name

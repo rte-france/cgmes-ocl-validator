@@ -2,250 +2,36 @@ package ocl;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import ocl.service.ValidationService;
+import ocl.service.util.ValidationUtils;
 import ocl.util.EvaluationResult;
-import ocl.util.IOUtils;
-import ocl.util.RuleDescription;
-import ocl.util.RuleDescriptionParser;
 import org.eclipse.emf.common.util.Diagnostic;
-import org.eclipse.emf.common.util.TreeIterator;
-import org.eclipse.emf.common.util.URI;
-import org.eclipse.emf.ecore.EObject;
-import org.eclipse.emf.ecore.EPackage;
-import org.eclipse.emf.ecore.resource.Resource;
-import org.eclipse.emf.ecore.resource.ResourceSet;
-import org.eclipse.emf.ecore.resource.impl.ResourceSetImpl;
-import org.eclipse.emf.ecore.util.Diagnostician;
-import org.eclipse.emf.ecore.xmi.IllegalValueException;
-import org.eclipse.emf.ecore.xmi.XMLResource;
-import org.eclipse.emf.ecore.xmi.impl.EcoreResourceFactoryImpl;
-import org.eclipse.emf.ecore.xmi.impl.XMIResourceFactoryImpl;
-import org.eclipse.ocl.pivot.model.OCLstdlib;
-import org.eclipse.ocl.xtext.completeocl.CompleteOCLStandaloneSetup;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.ParserConfigurationException;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Type;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class Validation {
-    private static Resource ecoreResource;
-    private static ResourceSet resourceSet;
-
-    private static URI mmURI;
-
-    private static List<EPackage> myPList = new ArrayList<>();
 
     private static Logger LOGGER = null;
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
         LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
-        try {
-            resourceSet = new ResourceSetImpl();
-            HashMap<String, String> configs = getConfig();
-            prepareValidator(configs.get("ecore_model"));
-        } catch (IOException | URISyntaxException io){
-            io.printStackTrace();
-        }
-    }
-
-    public Validation(){
-
-    }
-
-
-    private  static HashMap<String,String> getConfig() throws IOException, URISyntaxException {
-        HashMap<String,String> configs =  new HashMap<>();
-        InputStream config = new FileInputStream(System.getenv("VALIDATOR_CONFIG")+ File.separator+"config.properties");
-        Properties properties = new Properties();
-        properties.load(config);
-        String basic_model = properties.getProperty("basic_model");
-        String ecore_model = properties.getProperty("ecore_model");
-
-        if (basic_model!=null && ecore_model!=null){
-            configs.put("basic_model", IOUtils.resolveEnvVars(basic_model));
-            configs.put("ecore_model", IOUtils.resolveEnvVars(ecore_model));
-        }
-        else{
-            LOGGER.severe("Variable basic_model or ecore_model are missing from properties file");
-            System.exit(0);
-        }
-
-
-        return configs;
-    }
-
-    private static void prepareValidator(String ecore_model){
-        CompleteOCLStandaloneSetup.doSetup();
-
-        OCLstdlib.install();
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        mmURI = URI.createFileURI(new File(ecore_model).getAbsolutePath());
-
-
-        try {
-            ecoreResource = resourceSet.getResource(mmURI, true);
-        }
-        catch (Exception e ){
-            LOGGER.severe("Ecore file missing in "+ System.getenv("VALIDATOR_CONFIG")+" !");
-            System.exit(0);
-        }
-
-        myPList = getPackages(ecoreResource);
-
-    }
-
-
-    private static List<EPackage> getPackages(Resource r){
-        ArrayList<EPackage> pList = new ArrayList<EPackage>();
-        if (r.getContents() != null)
-            for (EObject obj : r.getContents())
-                if (obj instanceof EPackage) {
-                    pList.add((EPackage)obj);
-                }
-        TreeIterator<EObject> test = r.getAllContents();
-        while(test.hasNext()){
-            EObject t = test.next();
-            if(t instanceof EPackage)
-                pList.add((EPackage)t);
-        }
-        return pList;
-    }
-
-
-
-    public static ResourceSet createResourceSet(){
-
-        ResourceSet resourceSet = new ResourceSetImpl();
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("ecore", new EcoreResourceFactoryImpl());
-        resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap().put("xmi", new XMIResourceFactoryImpl());
-
-        for(EPackage ePackage : myPList){
-            resourceSet.getPackageRegistry().put(ePackage.getNsURI(),ePackage);
-        }
-
-        return resourceSet;
-    }
-
-
-    private Diagnostic evaluate(InputStream inputStream, String name){
-
-        ResourceSet resourceSet = createResourceSet();
-
-        HashMap<String, Boolean> options = new HashMap<>();
-        options.put(XMLResource.OPTION_DEFER_IDREF_RESOLUTION,true);
-        UUID uuid = UUID.randomUUID();
-        Resource model = resourceSet.createResource(URI.createURI(uuid.toString()));
-        try {
-            model.load(inputStream,options);
-        } catch (Resource.IOWrappedException we){
-            Exception exc = we.getWrappedException();
-            if (exc instanceof IllegalValueException){
-                IllegalValueException ive = (IllegalValueException) exc;
-                EObject object = ive.getObject();
-                String n = (object.eClass().getEStructuralFeature("name") != null) ? (" "+object.eGet(object.eClass().getEStructuralFeature("name"))+" ") : "";
-                String id =  (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null;
-                LOGGER.severe("Problem with: " + id + n + " (value:" + ive.getValue().toString() + ")");
-            }
-            LOGGER.severe(exc.getMessage());
-            return null;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
-
-        EObject rootObject = model.getContents().get(0);
-
-        Diagnostician take = new Diagnostician();
-
-        Diagnostic diagnostics;
-
-        diagnostics = take.validate(rootObject);
-        LOGGER.info(name + " validated");
-
-        rootObject = null;
-        take = null;
-        inputStream = null;
-        resourceSet = null;
-
-        return diagnostics;
-    }
-
-    private boolean excludeRuleName(String ruleName){
-        // MessageType introduced in ecore file but not managed on Java side
-        return "MessageType".equalsIgnoreCase(ruleName);
-    }
-
-
-    private List<EvaluationResult> getErrors(Diagnostic diagnostics, HashMap<String, RuleDescription> rules) {
-
-        List<EvaluationResult> results = new ArrayList<>();
-        if (diagnostics==null) return results;
-        for (Diagnostic childDiagnostic: diagnostics.getChildren()){
-            List<?> data = childDiagnostic.getData();
-            EObject object = (EObject) data.get(0);
-            String msg;
-            Matcher matcher;
-            Pattern pattern = Pattern.compile(".*'(\\w*)'.*");
-            if(data.size()==1){
-                msg = childDiagnostic.getMessage();
-                matcher = pattern.matcher(msg);
-                while (matcher.find()) {
-                    String name = (object.eClass().getEStructuralFeature("name") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("name"))) : null;
-                    String ruleName = matcher.group(1);
-                    if (!excludeRuleName(ruleName)){
-                        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
-                        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-                        results.add(new EvaluationResult(severity,
-                                ruleName,
-                                level,
-                                object.eClass().getName(),
-                                (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                                name, null
-                        ));
-                    }
-                }
-            } else {
-                // it is for sure a problem of cardinality, we set it by default to IncorrectAttributeOrRoleCard,
-                // later on we check anyway if it exists in UMLRestrictionRules file
-                msg = childDiagnostic.getMessage();
-                matcher = pattern.matcher(msg);
-                while (matcher.find()) {
-                    String ruleName = matcher.group(1);
-                    if (!excludeRuleName(ruleName)) {
-                        if(rules.get(ruleName)==null){
-                            ruleName = "IncorrectAttributeOrRoleCard";
-                        }
-                        String severity = rules.get(ruleName) == null ? "UNKOWN" : rules.get(ruleName).getSeverity();
-                        int level = rules.get(ruleName) == null ? 0 : rules.get(ruleName).getLevel();
-                        EvaluationResult evaluationResult = new EvaluationResult(severity,
-                                ruleName,
-                                level,
-                                object.eClass().getName(),
-                                (object.eClass().getEStructuralFeature("mRID") != null) ? String.valueOf(object.eGet(object.eClass().getEStructuralFeature("mRID"))) : null,
-                                null, null
-                        );
-                        if(rules.get(ruleName)!=null){
-                            evaluationResult.setSpecificMessage(matcher.group(1)+" of "+object.eClass().getName()+" is required.");
-                        }
-                        results.add(evaluationResult);
-
-                    }
-                }
-            }
-        }
-        diagnostics = null;
-        return results;
     }
 
 
@@ -256,10 +42,7 @@ public class Validation {
         BufferedReader br = new BufferedReader(new FileReader(args[0]));
         List<String> myList = gson.fromJson(br,listType);
 
-        Validation validation = new Validation();
-        RuleDescriptionParser parser = new RuleDescriptionParser();
-        HashMap<String, RuleDescription> rules = parser.parseRules("config/UMLRestrictionRules.xml");
-        parser = null;
+        ValidationService validationService = new ValidationService();
         for(String s:myList){
             File file = new File(s);
             ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
@@ -267,7 +50,9 @@ public class Validation {
             while (entries.hasMoreElements()) {
                 ZipEntry entry = entries.nextElement();
                 InputStream xmlStream = zip.getInputStream(entry);
-                List<EvaluationResult> res = validation.getErrors(validation.evaluate(xmlStream,entry.getName()), rules);
+                Diagnostic diagnostic = validationService.evaluate(xmlStream);
+                LOGGER.info(entry.getName()+ " validated");
+                List<EvaluationResult> res = validationService.getErrors(diagnostic, ValidationUtils.rules);
                 OutputStream zipout = Files.newOutputStream(Paths.get(file.getParentFile().getAbsolutePath() + File.separator +entry.getName().replace("xmi","json") +".zip"));
                 ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
                 String json = new Gson().toJson(res);
@@ -284,7 +69,7 @@ public class Validation {
         }
         File jsonCPU = new File(args[0]);
         jsonCPU.delete();
-        validation = null;
+        validationService = null;
 
 
     }

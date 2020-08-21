@@ -26,7 +26,7 @@ Run the command `mvn clean package` to generate the jar file of the validation l
 ### Distributable library with dependencies
 
 Run the command `mvn clean install` to create a redistributable package containing the validator library with required dependencies and scripts to easily launch the validator. The fully packaged validator is stored in the `target` folder:
-`target/ocl_validator-1.1-bin.tar.gz` or `target/ocl_validator-1.1-bin.zip`
+`target/ocl_validator-3.0-bin.tar.gz` or `target/ocl_validator-3.0-bin.zip`
 
 ## How to run the validator
 
@@ -51,6 +51,9 @@ The installation package contains has the following structure:
 
 ----- validate.sh
 
+----- startValidationDeamon.bat
+
+----- startValidationDeamon.sh
 
 ## Configuration
 
@@ -62,37 +65,60 @@ in the IGM if this is not the same. This process is similar to what OPDE does.
 - **important**: required validation rules are specified in a separare configuration files, it has to be stored into the `config` directory.
 These configuration files can be obtained from ENTSOe CGM BP group:
 
-https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/cgmes61970oclModel.ecore
+https://entsoe.sharefile.com/home/shared/foc0a777-e28e-45a2-a775-a517e1f8580a 
 
-and
 
-https://extra.entsoe.eu/CGM/Collaboration/EMFMeetings/UMLRestrictionRules.xml
 
 ## Usage
-###  Windows users
+
+### Stand-alone mode
+
+####  Windows users
 Run the following script
 `validate.bat
 `
-### Linux users
+#### Linux users
 Run the following script
 `validate.sh
 `
-
-In both cases, during the execution, logs will be displayed on the screen.
-The output of the CGMES file analysis is stored in an **Excel sheet** under the directory `inputs`. This xls file contains one sheet per IGM. 
+During the execution, logs will be displayed on the screen.
+The output of CGMES file analysis is stored in an **Excel sheet** under the directory `reports`. This xls file contains one sheet per IGM. 
 
 For each IGM are reported: 
 - the name of the violated rule, 
 - the object class it applies to and 
 - the rdf:id (and when possible the name) of the object instances it refers to.
 
+### Daemon mode
+
+We provide another mode of generation of reports, which aims at dealing with flows of data rather than static content of a directory
+
+####  Windows users
+Run the following script
+`startValidationDaemon.bat
+`
+#### Linux users
+Run the following script
+`startValidationDaemon.sh
+`
+
+The program is going to monitor the `inputs` directory.
+
+Each time there is a new profile instance, it will analyse it, wait for new inputs until there is a full IGM, then for this IGM the several steps of validation are triggered and two reports are created - the XLS one as for the stand-alone mode, and an XML report, similar to the one that the ENTSO-E quality portal displays. It is possible to activate/deactivate one or the other of the report types in the configuration file `config/config.properties`.
+
+The program works as a daemon (service), which means it stops only when the script is interrupted.
+
+Remark. This solution can for example be plugged on the file system interface of OPDE to automatically check incoming data.
+
+
+
 ## Disclaimer
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Copyright
-&copy; RTE 2019
-Authors: Marco Chiaramello, Jérôme Picault, Lars-Ola Gottfried Österlund
+&copy; RTE 2019-2020
+Contributors: Marco Chiaramello, Jérôme Picault, Maria Hergueta Ortega, Thibaut Vermeulen, Lars-Ola Gottfried Österlund
 
 ## License
 Mozilla Public License 2.0

@@ -9,50 +9,18 @@
  *       CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  *       ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  *       DAMAGE.
- *       (c) RTE 2019
+ *       (c) RTE 2020
  *       Authors: Marco Chiaramello, Jerome Picault
  **/
-package ocl;
+package ocl.service;
 
-import ocl.service.TransformationService;
+import ocl.Profile;
 
-import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
-
-import javax.xml.parsers.ParserConfigurationException;
 import java.util.HashMap;
 import java.util.List;
 
-import static ocl.service.util.TransformationUtils.getSimpleNameNoExt;
+public interface TransformationListener {
 
-/**
- *
- */
-public class XMITransformation extends TransformationService {
-
-    /**
-     *
-     * @param IGM_CGM
-     * @return
-     * @throws SAXException
-     * @throws ParserConfigurationException
-     */
-     HashMap<String, Document> convertData(HashMap<Profile,List<Profile>> IGM_CGM) {
-
-        HashMap<String,Document> xmi_map = new HashMap<>();
-
-        IGM_CGM.entrySet().parallelStream().forEach(entry->{
-
-            Document resulting_xmi = singleTransformation(entry);
-            if (resulting_xmi!=null){
-                xmi_map.put(getSimpleNameNoExt(entry.getKey()),resulting_xmi);
-            }
-
-        });
-
-        return xmi_map;
-
-    }
-
+    void enqueueForTransformation(HashMap<Profile, List<Profile>> xGM);
 
 }

@@ -22,7 +22,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 
-import ocl.IGM_CGM_preparation;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.Node;
@@ -36,7 +35,7 @@ public class RuleDescriptionParser {
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
-        LOGGER=Logger.getLogger(IGM_CGM_preparation.class.getName());
+        LOGGER=Logger.getLogger(RuleDescriptionParser.class.getName());
     }
 
 

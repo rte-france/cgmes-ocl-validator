@@ -21,7 +21,7 @@
 
     <groupId>ocl_validator</groupId>
     <artifactId>ocl_validator</artifactId>
-    <version>2.1</version>
+    <version>3.0</version>
     <build>
         <plugins>
             <plugin>
@@ -54,41 +54,87 @@
                 </executions>
             </plugin>
 
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jaxb2-maven-plugin</artifactId>
+                <version>2.5.0</version>
+                <executions>
+                    <execution>
+                        <id>xjc</id>
+                        <goals>
+                            <goal>xjc</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sources>
+                        <source>config/QAR_v4.1_CGMBP_23032020.xsd</source>
+                    </sources>
+                    <!-- The package of your generated sources -->
+                    <packageName>ocl.service.reporting.xml</packageName>
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
 
     <dependencies>
 
+        <!-- for compatibility with Java 11 -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.2.11</version>
+        </dependency>
+        <!-- for compatibility with Java 11 -->
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>2.2.11</version>
+        </dependency>
+        <!-- for compatibility with Java 11 -->
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.2.11</version>
+        </dependency>
+        <!-- for compatibility with Java 11 -->
+        <dependency>
+            <groupId>javax.activation</groupId>
+            <artifactId>activation</artifactId>
+            <version>1.1.1</version>
+        </dependency>
+
         <dependency>
             <groupId>org.eclipse.emf</groupId>
             <artifactId>org.eclipse.emf.ecore</artifactId>
-            <version>2.20.0</version>
+            <version>2.22.0</version>
         </dependency>
 
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.6</version>
+            <version>2.7</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>3.15</version>
+            <version>4.1.2</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.9</version>
+            <version>3.11</version>
         </dependency>
 
 
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>2.8.2</version>
+            <version>2.8.6</version>
         </dependency>
 
         <dependency>
@@ -110,9 +156,9 @@
         </dependency>
 
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.17</version>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.13.3</version>
         </dependency>
 
         <dependency>
@@ -124,7 +170,7 @@
         <dependency>
             <groupId>org.eclipse.emf</groupId>
             <artifactId>org.eclipse.emf.common</artifactId>
-            <version>2.17.0</version>
+            <version>2.19.0</version>
         </dependency>
 
         <dependency>
@@ -214,13 +260,13 @@
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.osgi</artifactId>
-            <version>3.15.100</version>
+            <version>3.15.300</version>
         </dependency>
 
         <dependency>
             <groupId>org.eclipse.platform</groupId>
             <artifactId>org.eclipse.urischeme</artifactId>
-            <version>1.0.500</version>
+            <version>1.1.0</version>
         </dependency>
 
         <dependency>
@@ -234,7 +280,7 @@
         <dependency>
             <groupId>org.eclipse.xtext</groupId>
             <artifactId>org.eclipse.xtext</artifactId>
-            <version>2.20.0</version>
+            <version>2.22.0</version>
         </dependency>
 
         <dependency>
@@ -248,7 +294,7 @@
         <dependency>
             <groupId>org.eclipse.xtext</groupId>
             <artifactId>org.eclipse.xtext.util</artifactId>
-            <version>2.20.0</version>
+            <version>2.22.0</version>
         </dependency>
 
         <dependency>
