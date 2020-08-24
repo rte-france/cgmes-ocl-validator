@@ -36,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 import static ocl.util.IOUtils.trimExtension;
 
@@ -128,8 +129,7 @@ public class XLSReportWriter implements ReportWriter {
 
             }
             sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, colNum - 1));
-            for (int i = 1; i < colNum; i++)
-                sheet.autoSizeColumn(i);
+            IntStream.range(0, colNum).forEach((int i) -> sheet.autoSizeColumn(i));
             sheet.createFreezePane(0, 1);
 
 
