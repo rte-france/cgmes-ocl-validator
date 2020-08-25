@@ -42,7 +42,7 @@ public abstract class BasicService implements Runnable {
 
     // The executorService is shared between the different services as thu=is is not possible to share a thread pool
     // among distinct executor services
-    protected ExecutorService executorService = null;
+    protected static ExecutorService executorService = null;
 
 
     public BasicService(){
@@ -93,39 +93,48 @@ public abstract class BasicService implements Runnable {
         }
     }
 
-
-    public abstract class PriorityCallable implements Callable, Comparable<PriorityCallable>{
-        private Priority priority;
-
-        public PriorityCallable(Priority priority){
-            this.priority = priority;
-        }
+    public class PriorityComparable implements Comparable{
+        protected Priority taskPriority;
 
         @Override
-        public int compareTo(PriorityCallable other) {
+        public int compareTo(Object other) {
             // we want higher priority to go first
-            return other.priority.getValue() - this.priority.getValue();
+            if (other instanceof PriorityCallable)
+                return ((PriorityCallable)other).taskPriority.getValue() - this.taskPriority.getValue();
+            else if (other instanceof PriorityRunnable)
+                return ((PriorityRunnable)other).taskPriority.getValue() - this.taskPriority.getValue();
+            return 0;
         }
+    }
+
+
+    public abstract class PriorityCallable extends PriorityComparable implements Callable{
+
+        public PriorityCallable(Priority taskPriority){
+            this.taskPriority = taskPriority;
+        }
+
 
     }
 
-    public abstract class PriorityRunnable implements Runnable, Comparable<PriorityRunnable>{
-        private Priority priority;
+    public abstract class PriorityRunnable extends PriorityComparable implements Runnable{
 
         public PriorityRunnable(Priority priority){
-            this.priority = priority;
-        }
-
-        @Override
-        public int compareTo(PriorityRunnable other) {
-            // we want higher priority to go first
-            return other.priority.getValue() - this.priority.getValue();
+            this.taskPriority = priority;
         }
 
     }
 
     protected void printPoolSize(){
-        logger.info("Pool size is now: " + ((ThreadPoolExecutor)executorService).getActiveCount());
+        ThreadPoolExecutor es = ((ThreadPoolExecutor)executorService) ;
+        logger.info("-- Pool - Active: " + es.getActiveCount() + "\tQueued: " + es.getQueue().size() + "\tDone: " + es.getCompletedTaskCount());
+    }
+
+    protected void printPoolContent(){
+        ThreadPoolExecutor es = ((ThreadPoolExecutor)executorService) ;
+        logger.info("-- Pool content");
+        //TODO: to be implemented: details about service waiting and related xgm
+
     }
 
 }
