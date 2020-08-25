@@ -16,6 +16,12 @@ package ocl.service;
 
 import ocl.service.util.Priority;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.FutureTask;
@@ -128,13 +134,26 @@ public abstract class BasicService implements Runnable {
     protected void printPoolSize(){
         ThreadPoolExecutor es = ((ThreadPoolExecutor)executorService) ;
         logger.info("-- Pool - Active: " + es.getActiveCount() + "\tQueued: " + es.getQueue().size() + "\tDone: " + es.getCompletedTaskCount());
+        printPoolContent();
     }
 
     protected void printPoolContent(){
         ThreadPoolExecutor es = ((ThreadPoolExecutor)executorService) ;
-        logger.info("-- Pool content");
         //TODO: to be implemented: details about service waiting and related xgm
-
+        Iterator<Runnable> it  = es.getQueue().iterator();
+        List<String> tasks = new ArrayList<>();
+        while(it.hasNext()){
+            Runnable rr = it.next();
+            if (rr instanceof ComparableFutureTask) {
+                tasks.add(((ComparableFutureTask) rr).comparableJob.getClass().getSimpleName());
+            }
+        }
+        if (tasks.isEmpty()) return;
+        logger.info("-- Queued tasks");
+        Set<String> distinct = new HashSet<>(tasks);
+        for (String s: distinct) {
+            logger.info("----- " + s + ": " + Collections.frequency(tasks, s));
+        }
     }
 
 }
