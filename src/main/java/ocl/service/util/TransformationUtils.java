@@ -25,15 +25,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipOutputStream;
 
 public class TransformationUtils {
+
+    static Logger logger = null;
 
     private static DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
     static{
@@ -55,6 +62,40 @@ public class TransformationUtils {
 
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         transformer.transform(new DOMSource(doc),new StreamResult(new File(name)));
+    }
+
+
+    /**
+     * @param doc
+     * @param name
+     * @throws TransformerException
+     */
+
+    public static File getFile(Document doc, String nameXML, String type) throws TransformerException, IOException {
+        int pos = nameXML.lastIndexOf(".");
+        String name= pos>0 ? nameXML.substring(0,pos) : nameXML;
+
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+        transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+
+        transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+        String cacheDir_ = Configuration.getConfig().get("cacheDir");
+
+        StringWriter sw = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(sw));
+        OutputStream zipout = Files.newOutputStream(Paths.get(cacheDir_+"/tmp_MergingCGM_" + name + "_" + type  + ".zip"));
+        ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
+        ZipEntry entry_ = new ZipEntry("tmp_MergingCGM_" + name + "_" + type  + ".xml"); // The name
+        zipOutputStream.putNextEntry(entry_);
+        zipOutputStream.write(sw.toString().getBytes());
+        zipOutputStream.closeEntry();
+        zipOutputStream.close();
+
+        return new File(cacheDir_+"/tmp_MergingCGM_"+ name + "_" + type +".zip");
     }
 
 
@@ -125,16 +166,8 @@ public class TransformationUtils {
      * @throws ParserConfigurationException
      */
     public static NodeList getNodeList(Profile profile) throws IOException, SAXException, ParserConfigurationException {
-        DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
-        Document document = null;
-        ZipFile zip = new ZipFile(new File(profile.file.getAbsolutePath()));
-        Enumeration<? extends ZipEntry> entries = zip.entries();
-        while (entries.hasMoreElements()){
-            ZipEntry entry = entries.nextElement();
-            InputStream xmlStream = zip.getInputStream(entry);
-            document = documentBuilder.parse(xmlStream);
-            xmlStream.close();
-        }
+
+        Document document = getDocument(profile.file);
         NodeList nodeList = document.getDocumentElement().getChildNodes();
         return nodeList;
 
@@ -145,6 +178,22 @@ public class TransformationUtils {
         Document document = documentBuilder.parse(file);
         NodeList nodeList = document.getDocumentElement().getChildNodes();
         return nodeList;
+    }
+
+    public static Document getDocument(File file) throws ParserConfigurationException, IOException, SAXException {
+        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+        builderFactory.setNamespaceAware(true);
+        DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
+        Document document = null;
+        ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
+        Enumeration<? extends ZipEntry> entries = zip.entries();
+        while (entries.hasMoreElements()){
+            ZipEntry entry = entries.nextElement();
+            InputStream xmlStream = zip.getInputStream(entry);
+            document = documentBuilder.parse(xmlStream);
+            xmlStream.close();
+        }
+        return document;
     }
 
     public static void writeDocument(Document doc, OutputStream out) {

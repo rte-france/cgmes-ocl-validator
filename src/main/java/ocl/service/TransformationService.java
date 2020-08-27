@@ -186,22 +186,22 @@ public class TransformationService extends BasicService implements Transformatio
             Profile TPBD = null;
             List<String> sv_sn = new ArrayList<>();
 
-            Profile EQ = null;
-            Profile SSH = null;
-            Profile TP = null;
+            List<Profile> EQs = new ArrayList<>();
+            List<Profile> SSHs = new ArrayList<>();
+            List<Profile> TPs = new ArrayList<>();
 
             sv_sn.add(getSimpleNameNoExt(key));
 
             for(Profile value : entry.getValue()){
                 switch (value.type){
                     case EQ:
-                        EQ = value;
+                        EQs.add(value);
                         break;
                     case TP:
-                        TP = value;
+                        TPs.add(value);
                         break;
                     case SSH:
-                        SSH = value;
+                        SSHs.add(value);
                         break;
                     case EQBD:
                         EQBD = value;
@@ -212,20 +212,31 @@ public class TransformationService extends BasicService implements Transformatio
                 }
             }
 
-            CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(EQ,TP,SSH,key, sv_sn.get(0));
+            if(EQs.size() == TPs.size() && EQs.size() == SSHs.size()){
+                Profile merged_EQ = null;
+                Profile merged_SSH = null;
+                Profile merged_TP = null;
 
-            if(!xmlConsistency.isExcluded()){
-                Document merged_xml = createMerge(key, EQBD,TPBD, TransformationUtils.getBusinessProcess(key.xml_name), key, EQ, SSH, TP,
-                        XGMPreparationUtils.defaultBDIds);
-                resulting_xmi = createXmi(key, merged_xml);
-                isNB.remove(key); //FIXME: not clean
-                isShortCircuit.remove(key); //FIXME: not clean
-                return resulting_xmi;
-            }
-            else{
-                logger.info("Xmi not created for "+key.xml_name+". Probably basic xml/rdf consistency is broken.");
-            }
+                for(int i = 0 ; i < EQs.size(); i++) {
+                    merged_EQ = createMergeProfile(merged_EQ, EQs.get(i), "EQ", TransformationUtils.getBusinessProcess(key.xml_name));
+                    merged_SSH = createMergeProfile(merged_SSH, SSHs.get(i), "SSH", TransformationUtils.getBusinessProcess(key.xml_name));
+                    merged_TP = createMergeProfile(merged_TP, TPs.get(i), "TP", TransformationUtils.getBusinessProcess(key.xml_name));
+                }
 
+                CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(merged_EQ, merged_TP, merged_SSH, key, sv_sn.get(0)); //CGM consistency
+                if (!xmlConsistency.isExcluded()) {
+                    Document merged_xml = createMerge(key, EQBD, TPBD, TransformationUtils.getBusinessProcess(key.xml_name), key, merged_EQ, merged_SSH, merged_TP, XGMPreparationUtils.defaultBDIds);
+                    resulting_xmi = createXmi(key, merged_xml);
+                    isNB.remove(key); //FIXME: not clean
+                    isShortCircuit.remove(key); //FIXME: not clean
+                    return resulting_xmi;
+                } else {
+                    logger.info("Xmi not created for " + key.xml_name + ". Probably basic xml/rdf consistency is broken.");
+                }
+
+            }else{
+                logger.severe("Profile missing in CGM or IGM called " + key.xml_name + ". Please verify input files. ");
+            }
             return null;
         } catch (Exception e){
             logger.severe("Error in processing: "+ key.xml_name);
@@ -630,6 +641,46 @@ public class TransformationService extends BasicService implements Transformatio
         transf_=null;
         return  target;
 
+    }
+
+
+    private synchronized Profile createMergeProfile(Profile mergedProfile, Profile toMergeProfile, String profileName, String business)throws ParserConfigurationException, IOException, SAXException, TransformerException,URISyntaxException{
+
+        if(mergedProfile == null) { // first IGM in CGM or only IGM
+            Document doc_igm = TransformationUtils.getDocument(toMergeProfile.file);
+            File file_igm = TransformationUtils.getFile(doc_igm, toMergeProfile.xml_name, profileName); // we use a support document in cache (save and load it again to merge the CGM files)
+            return new Profile(Profile.getType(toMergeProfile.xml_name), toMergeProfile.id, toMergeProfile.depOn, file_igm, toMergeProfile.xml_name, toMergeProfile.modelProfile);
+
+        }else{ // Merge iteratively the following IGMs with the file saved in cache and save it in cache.
+            NodeList nodeListFile1 = getNodeList(mergedProfile);
+            NodeList nodeListFile2 = getNodeList(toMergeProfile);
+            Document targetDocument = nodeListFile1.item(0).getOwnerDocument();
+
+            targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:brlnd", "http://brolunda.com/ecore-converter#");
+            targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp", "http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
+
+            HashMap<String,Node> eq_ = new HashMap<>();
+
+            addObject(targetDocument, nodeListFile2, "md:FullModel", true);
+
+            Node[] nodes2 = convertToArray(nodeListFile2);
+            for (Node node : nodes2) {
+                if(!StringUtils.isEmpty(node.getLocalName())){
+                    if(!StringUtils.contains(node.getLocalName(),"FullModel")){
+                        addObject(targetDocument, node, false);
+                    }
+                }
+            }
+
+            cleanXml(targetDocument);
+            File fileMerged = TransformationUtils.getFile(targetDocument, mergedProfile.xml_name, profileName);
+
+            nodeListFile1=null;
+            nodeListFile2=null;
+            nodes2 = null;
+
+            return new Profile(Profile.getType(mergedProfile.xml_name), mergedProfile.id, mergedProfile.depOn, fileMerged, mergedProfile.xml_name, mergedProfile.modelProfile); //mergedProfile
+        }
     }
 
     /**
@@ -1298,6 +1349,30 @@ public class TransformationService extends BasicService implements Transformatio
                 addedNodes.put(node.getAttributes().item(0).getNodeValue(), node);
             }
 
+        }
+        return addedNodes;
+    }
+
+
+    /**
+     *
+     * @param doc
+     * @param node
+     * @param begin
+     * @throws IOException
+     * @throws TransformerException
+     */
+    private HashMap<String,Node> addObject(Document doc, Node nodeToInsert, boolean begin) throws IOException, TransformerException {
+        HashMap<String,Node> addedNodes = new HashMap<>();
+        if(nodeToInsert.getLocalName()!=null){
+            Node node;
+            if(begin) {
+                node= doc.getDocumentElement().insertBefore(doc.importNode(nodeToInsert, true), doc.getDocumentElement().getChildNodes().item(0));
+            }
+            else{
+                node= doc.getDocumentElement().appendChild(doc.importNode(nodeToInsert,true));
+            }
+            addedNodes.put(node.getAttributes().item(0).getNodeValue(), node);
         }
         return addedNodes;
     }
