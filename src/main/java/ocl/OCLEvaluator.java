@@ -91,7 +91,6 @@ public class OCLEvaluator {
         XMITransformation my_transf = new XMITransformation();
 
         HashMap<String, Document> xmi_list = new HashMap<>();
-        Configuration.cacheDir.toFile().mkdirs();
         try {
             XGMPreparationUtils.readZips(where.toFile(), SVProfiles, otherProfiles, BDProfiles);
             // trigger assembly
