@@ -126,6 +126,8 @@ public class Configuration {
         else{
             cacheDir= Paths.get(inputDir.toAbsolutePath().toString()+File.separator+"/cache");
         }
+        cacheDir.toFile().mkdirs();
+
 
         if(batchSize_!=null){
             batchSize = Integer.parseInt(batchSize_);
