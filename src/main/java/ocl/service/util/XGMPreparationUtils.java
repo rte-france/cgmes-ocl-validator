@@ -300,6 +300,11 @@ public class XGMPreparationUtils {
                     entry.getValue().addAll(DEFAULT_BDS);
                 }
                 logger.info("xGM complete: " + entry.getKey().xml_name);
+                if (Configuration.debugMode){
+                    for (Profile p : entry.getValue()){
+                        logger.info(" -- contains: "+p.xml_name);
+                    }
+                }
             }
         }
 
