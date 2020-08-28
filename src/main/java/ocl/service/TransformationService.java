@@ -213,15 +213,9 @@ public class TransformationService extends BasicService implements Transformatio
             }
 
             if(EQs.size() == TPs.size() && EQs.size() == SSHs.size()){
-                Profile merged_EQ = null;
-                Profile merged_SSH = null;
-                Profile merged_TP = null;
-
-                for(int i = 0 ; i < EQs.size(); i++) {
-                    merged_EQ = createMergeProfile(merged_EQ, EQs.get(i), "EQ", TransformationUtils.getBusinessProcess(key.xml_name));
-                    merged_SSH = createMergeProfile(merged_SSH, SSHs.get(i), "SSH", TransformationUtils.getBusinessProcess(key.xml_name));
-                    merged_TP = createMergeProfile(merged_TP, TPs.get(i), "TP", TransformationUtils.getBusinessProcess(key.xml_name));
-                }
+                Profile merged_EQ = createMergeProfile(EQs, "EQ", TransformationUtils.getBusinessProcess(key.xml_name));
+                Profile merged_SSH = createMergeProfile(SSHs, "SSH", TransformationUtils.getBusinessProcess(key.xml_name));
+                Profile merged_TP = createMergeProfile(TPs, "TP", TransformationUtils.getBusinessProcess(key.xml_name));
 
                 CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(merged_EQ, merged_TP, merged_SSH, key, sv_sn.get(0)); //CGM consistency
                 if (!xmlConsistency.isExcluded()) {
@@ -644,22 +638,15 @@ public class TransformationService extends BasicService implements Transformatio
     }
 
 
-    private synchronized Profile createMergeProfile(Profile mergedProfile, Profile toMergeProfile, String profileName, String business)throws ParserConfigurationException, IOException, SAXException, TransformerException,URISyntaxException{
+    private synchronized Profile createMergeProfile(List<Profile> profiles, String profileName, String business)throws ParserConfigurationException, IOException, SAXException, TransformerException,URISyntaxException{
 
-        if(mergedProfile == null) { // first IGM in CGM or only IGM
-            Document doc_igm = TransformationUtils.getDocument(toMergeProfile.file);
-            File file_igm = TransformationUtils.getFile(doc_igm, toMergeProfile.xml_name, profileName); // we use a support document in cache (save and load it again to merge the CGM files)
-            return new Profile(Profile.getType(toMergeProfile.xml_name), toMergeProfile.id, toMergeProfile.depOn, file_igm, toMergeProfile.xml_name, toMergeProfile.modelProfile);
+        NodeList nodeListFile1 = getNodeList(profiles.get(0));
+        Document targetDocument = nodeListFile1.item(0).getOwnerDocument();
+        targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:brlnd", "http://brolunda.com/ecore-converter#");
+        targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp", "http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
 
-        }else{ // Merge iteratively the following IGMs with the file saved in cache and save it in cache.
-            NodeList nodeListFile1 = getNodeList(mergedProfile);
-            NodeList nodeListFile2 = getNodeList(toMergeProfile);
-            Document targetDocument = nodeListFile1.item(0).getOwnerDocument();
-
-            targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:brlnd", "http://brolunda.com/ecore-converter#");
-            targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp", "http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
-
-            HashMap<String,Node> eq_ = new HashMap<>();
+        for(int i = 1 ; i < profiles.size(); i++) {
+            NodeList nodeListFile2 = getNodeList(profiles.get(i));
 
             addObject(targetDocument, nodeListFile2, "md:FullModel", true);
 
@@ -672,15 +659,16 @@ public class TransformationService extends BasicService implements Transformatio
                 }
             }
 
-            cleanXml(targetDocument);
-            File fileMerged = TransformationUtils.getFile(targetDocument, mergedProfile.xml_name, profileName);
-
-            nodeListFile1=null;
             nodeListFile2=null;
             nodes2 = null;
-
-            return new Profile(Profile.getType(mergedProfile.xml_name), mergedProfile.id, mergedProfile.depOn, fileMerged, mergedProfile.xml_name, mergedProfile.modelProfile); //mergedProfile
         }
+
+        cleanXml(targetDocument);
+        File fileMerged = TransformationUtils.getFile(targetDocument, profiles.get(0).xml_name, profileName);
+
+        nodeListFile1=null;
+
+        return new Profile(Profile.getType(profiles.get(0).xml_name), profiles.get(0).id, profiles.get(0).depOn, fileMerged, profiles.get(0).xml_name, profiles.get(0).modelProfile); //mergedProfile
     }
 
     /**
