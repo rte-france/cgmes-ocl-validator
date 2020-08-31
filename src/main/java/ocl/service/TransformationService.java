@@ -213,9 +213,20 @@ public class TransformationService extends BasicService implements Transformatio
             }
 
             if(EQs.size() == TPs.size() && EQs.size() == SSHs.size()){
-                Profile merged_EQ = createMergeProfile(EQs, "EQ", TransformationUtils.getBusinessProcess(key.xml_name));
-                Profile merged_SSH = createMergeProfile(SSHs, "SSH", TransformationUtils.getBusinessProcess(key.xml_name));
-                Profile merged_TP = createMergeProfile(TPs, "TP", TransformationUtils.getBusinessProcess(key.xml_name));
+                Profile merged_EQ ;
+                Profile merged_SSH ;
+                Profile merged_TP ;
+                if (EQs.size()==1) {
+                    // IGM
+                    merged_EQ = EQs.get(0);
+                    merged_SSH = SSHs.get(0);
+                    merged_TP = TPs.get(0);
+                } else { // size >1
+                    // CGM
+                    merged_EQ = createMergeProfile(EQs, "EQ", TransformationUtils.getBusinessProcess(key.xml_name));
+                    merged_SSH = createMergeProfile(SSHs, "SSH", TransformationUtils.getBusinessProcess(key.xml_name));
+                    merged_TP = createMergeProfile(TPs, "TP", TransformationUtils.getBusinessProcess(key.xml_name));
+                }
 
                 CheckXMLConsistency xmlConsistency = new CheckXMLConsistency(merged_EQ, merged_TP, merged_SSH, key, sv_sn.get(0)); //CGM consistency
                 if (!xmlConsistency.isExcluded()) {
@@ -644,7 +655,6 @@ public class TransformationService extends BasicService implements Transformatio
         Document targetDocument = nodeListFile1.item(0).getOwnerDocument();
         targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:brlnd", "http://brolunda.com/ecore-converter#");
         targetDocument.getDocumentElement().setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:cgmbp", "http://entsoe.eu/CIM/Extensions/CGM-BP/2020#");
-
         for(int i = 1 ; i < profiles.size(); i++) {
             NodeList nodeListFile2 = getNodeList(profiles.get(i));
 
@@ -1345,7 +1355,7 @@ public class TransformationService extends BasicService implements Transformatio
     /**
      *
      * @param doc
-     * @param node
+     * @param nodeToInsert
      * @param begin
      * @throws IOException
      * @throws TransformerException
