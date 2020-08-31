@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Enumeration;
@@ -67,7 +68,7 @@ public class TransformationUtils {
 
     /**
      * @param doc
-     * @param name
+     * @param nameXML
      * @throws TransformerException
      */
 
@@ -88,10 +89,10 @@ public class TransformationUtils {
         StringWriter sw = new StringWriter();
         transformer.transform(new DOMSource(doc), new StreamResult(sw));
         OutputStream zipout = Files.newOutputStream(Paths.get(cacheDir_+"/tmp_MergingCGM_" + name + "_" + type  + ".zip"));
-        ZipOutputStream zipOutputStream = new ZipOutputStream(zipout);
+        ZipOutputStream zipOutputStream = new ZipOutputStream(zipout, StandardCharsets.UTF_8);
         ZipEntry entry_ = new ZipEntry("tmp_MergingCGM_" + name + "_" + type  + ".xml"); // The name
         zipOutputStream.putNextEntry(entry_);
-        zipOutputStream.write(sw.toString().getBytes());
+        zipOutputStream.write(sw.toString().getBytes(StandardCharsets.UTF_8));
         zipOutputStream.closeEntry();
         zipOutputStream.close();
 
@@ -181,8 +182,6 @@ public class TransformationUtils {
     }
 
     public static Document getDocument(File file) throws ParserConfigurationException, IOException, SAXException {
-        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-        builderFactory.setNamespaceAware(true);
         DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
         Document document = null;
         ZipFile zip = new ZipFile(new File(file.getAbsolutePath()));
