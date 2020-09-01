@@ -203,7 +203,7 @@ public class WatchingService extends BasicService {
 
         Path name = ev.context();
         Path child = dir.resolve(name);
-        logger.fine( event.kind().name() + ":" + child);
+        logger.finest( event.kind().name() + ":" + child);
 
         if (kind == ENTRY_MODIFY || kind == ENTRY_CREATE) {
             try {
@@ -271,7 +271,7 @@ public class WatchingService extends BasicService {
 
                 long minExpiration = min(expirationTimes.values());
                 long timeout = minExpiration-currentTime;
-                logger.fine("Timeout: "+timeout);
+                logger.finest("Timeout: "+timeout);
 
                 // workaround for Windows as poll does not respect the timeout
                 if (SystemUtils.IS_OS_WINDOWS){

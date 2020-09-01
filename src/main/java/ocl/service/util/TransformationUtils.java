@@ -29,10 +29,10 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -40,8 +40,6 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 public class TransformationUtils {
-
-    static Logger logger = null;
 
     private static DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
     static{
@@ -53,7 +51,7 @@ public class TransformationUtils {
      * @param name
      * @throws TransformerException
      */
-    public static void printDocument(Document doc, String name) throws  TransformerException {
+    public static void printDocument(Document doc, Path name) throws  TransformerException {
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
@@ -62,7 +60,7 @@ public class TransformationUtils {
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
 
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-        transformer.transform(new DOMSource(doc),new StreamResult(new File(name)));
+        transformer.transform(new DOMSource(doc),new StreamResult(name.toFile()));
     }
 
 

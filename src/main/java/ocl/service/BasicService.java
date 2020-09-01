@@ -14,6 +14,7 @@
  **/
 package ocl.service;
 
+import ocl.service.util.Configuration;
 import ocl.service.util.Priority;
 
 import java.util.ArrayList;
@@ -29,16 +30,23 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public abstract class BasicService implements Runnable {
 
-    static Logger logger = null;
+    public static Logger logger = null;
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+        Handler consoleHandler = new ConsoleHandler();
+        consoleHandler.setLevel(Level.FINER);
         logger = Logger.getLogger(BasicService.class.getName());
-
+        logger.addHandler(consoleHandler);
+        logger.setUseParentHandlers(false);
+        if (Configuration.debugMode) logger.setLevel(Level.FINER);
     }
 
     protected static final int MAX_POOL = Runtime.getRuntime().availableProcessors();
@@ -133,7 +141,7 @@ public abstract class BasicService implements Runnable {
 
     protected void printPoolSize(){
         ThreadPoolExecutor es = ((ThreadPoolExecutor)executorService) ;
-        logger.info("-- Pool - Active: " + es.getActiveCount() + "\tQueued: " + es.getQueue().size() + "\tDone: " + es.getCompletedTaskCount());
+        logger.fine("-- Pool - Active: " + es.getActiveCount() + "\tQueued: " + es.getQueue().size() + "\tDone: " + es.getCompletedTaskCount());
         printPoolContent();
     }
 
