@@ -14,6 +14,7 @@
  **/
 package ocl;
 
+import static ocl.service.BasicService.logger;
 import ocl.service.ReportingService;
 import ocl.service.TransformationService;
 import ocl.service.ValidationService;
@@ -23,17 +24,9 @@ import ocl.service.util.Configuration;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
-import java.util.logging.Logger;
+
 
 public class CGMESValidatorDaemon {
-
-    private static Logger logger = null;
-    static {
-        System.setProperty("java.util.logging.SimpleFormatter.format",
-                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
-        logger = Logger.getLogger(WatchingService.class.getName());
-
-    }
 
     private Path inputPath;
 

@@ -17,6 +17,7 @@ package ocl;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import static ocl.service.BasicService.logger;
 import ocl.service.util.Configuration;
 import ocl.service.util.TransformationUtils;
 import ocl.service.util.ValidationUtils;
@@ -57,23 +58,12 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipOutputStream;
 
 
 public class OCLEvaluator {
-
-    // ----- Static initializations
-    private static Logger LOGGER = null;
-    static {
-        System.setProperty("java.util.logging.SimpleFormatter.format",
-                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
-        LOGGER = Logger.getLogger(OCLEvaluator.class.getName());
-
-    }
-
 
     private Set<Profile> SVProfiles = Collections.synchronizedSet(new HashSet<>());
     private Set<Profile> otherProfiles = Collections.synchronizedSet(new HashSet<>());
@@ -97,14 +87,14 @@ public class OCLEvaluator {
             XGMPreparationUtils.reorderModels(SVProfiles, otherProfiles, BDProfiles, IGM_CGM);
             // check if models are complete
             XGMPreparationUtils.checkConsistency(IGM_CGM);
-            LOGGER.info("Reordering done!");
+            logger.info("Reordering done!");
         } catch (IOException | ParserConfigurationException | SAXException e) {
             e.printStackTrace();
         }
 
         xmi_list= my_transf.convertData(IGM_CGM);
 
-        LOGGER.info("XMI transformation done!");
+        logger.info("XMI transformation done!");
 
         HashMap<String, Integer> ruleLevels = my_transf.getRuleLevels();
 
@@ -112,7 +102,7 @@ public class OCLEvaluator {
 
         List<String> files = new ArrayList<>();
 
-        LOGGER.info("Validator ready");
+        logger.info("Validator ready");
 
         files.addAll(write(xmi_list));
 
@@ -143,11 +133,11 @@ public class OCLEvaluator {
         }
 
 
-        LOGGER.info("Start Validation");
+        logger.info("Start Validation");
 
         submit(fileCPUs);
 
-        LOGGER.info("End Validation");
+        logger.info("End Validation");
 
 
         FileFilter fileFilter = new WildcardFileFilter("*.json.zip", IOCase.INSENSITIVE);
@@ -181,9 +171,9 @@ public class OCLEvaluator {
         if (Configuration.cacheDir==null) return;
         try {
             FileUtils.deleteDirectory(Configuration.cacheDir.toFile());
-            LOGGER.info("Cache cleaned");
+            logger.info("Cache cleaned");
         } catch (IOException e){
-            LOGGER.severe("Cannot remove cache directory: " + Configuration.cacheDir.toString());
+            logger.severe("Cannot remove cache directory: " + Configuration.cacheDir.toString());
             e.printStackTrace();
         }
     }
@@ -313,7 +303,7 @@ public class OCLEvaluator {
             OCLEvaluator evaluator = new OCLEvaluator();
 
             if(Configuration.debugMode)
-                LOGGER.info("Validator running in debug mode");
+                logger.info("Validator running in debug mode");
             Map<String, List<EvaluationResult>> synthesis = evaluator.assessRules(Configuration.inputDir);
 
             // writeDocument report
