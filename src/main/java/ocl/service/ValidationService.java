@@ -43,6 +43,7 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static ocl.service.util.TransformationUtils.getValidationType;
 import static ocl.service.util.TransformationUtils.toInputStream;
 
 public class ValidationService extends BasicService implements ValidationListener{
@@ -187,6 +188,9 @@ public class ValidationService extends BasicService implements ValidationListene
         String key = p.xml_name;
         logger.info("Validating:\t"+key);
 
+        String type = getValidationType(xmi);
+
+
         Future<List<EvaluationResult>> results = executorService.submit(new ValidationTask(xmi));
 
         // debug: display pool size
@@ -200,7 +204,7 @@ public class ValidationService extends BasicService implements ValidationListene
             else {
                 logger.info("Validated:\t" + key);
 
-                reportingListener.enqueueForReporting(p, res);
+                reportingListener.enqueueForReporting(p, res, type);
             }
 
         } catch (InterruptedException | ExecutionException e){

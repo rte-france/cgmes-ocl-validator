@@ -2,6 +2,7 @@ package ocl.service.util;
 
 import ocl.Profile;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -41,7 +42,11 @@ import java.util.zip.ZipOutputStream;
 
 public class TransformationUtils {
 
-    private static DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+    public static final String IGM = "igm";
+    public static final String CGM = "cgm";
+
+
+    public static DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
     static{
         builderFactory.setNamespaceAware(true);
     }
@@ -61,6 +66,20 @@ public class TransformationUtils {
 
         transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
         transformer.transform(new DOMSource(doc),new StreamResult(name.toFile()));
+    }
+
+    /**
+     * Indicates the type (IGM/CGM) associated to a XMI
+     * @param xmi
+     */
+    public static String getValidationType(Document xmi){
+        NodeList nl = xmi.getElementsByTagName("MetaData:DataSet");
+        String type = IGM;
+        if (nl.getLength()>0){
+            Element n = (Element)nl.item(0);
+            type = n.getAttribute("type");
+        }
+        return type;
     }
 
 

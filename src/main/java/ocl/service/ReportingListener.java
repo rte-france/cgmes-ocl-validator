@@ -23,6 +23,6 @@ import java.util.List;
 
 public interface ReportingListener {
 
-    void enqueueForReporting(Profile p, List<EvaluationResult> errors);
+    void enqueueForReporting(Profile p, List<EvaluationResult> errors, String validationType);
 
 }

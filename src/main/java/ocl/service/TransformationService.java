@@ -15,6 +15,7 @@
 package ocl.service;
 
 import ocl.Profile;
+import ocl.service.reporting.xml.IGM;
 import ocl.service.util.Configuration;
 import ocl.service.util.Priority;
 import ocl.service.util.TransformationUtils;
@@ -28,7 +29,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.TransformerException;
 import java.io.File;
@@ -46,7 +46,9 @@ import java.util.concurrent.Future;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static ocl.service.util.TransformationUtils.CGM;
 import static ocl.service.util.TransformationUtils.addNode;
+import static ocl.service.util.TransformationUtils.builderFactory;
 import static ocl.service.util.TransformationUtils.convertToArray;
 import static ocl.service.util.TransformationUtils.getNodeList;
 import static ocl.service.util.TransformationUtils.getSimpleNameNoExt;
@@ -91,7 +93,7 @@ public class TransformationService extends BasicService implements Transformatio
             brlndType.put("TP", "TpModel");
             brlndType.put("SSH", "SshModel");
             brlndType.put("SV", "SvModel");
-        } catch(IOException | ParserConfigurationException | SAXException | URISyntaxException e){
+        } catch(IOException | ParserConfigurationException | SAXException e){
             e.printStackTrace();
         }
     }
@@ -182,7 +184,7 @@ public class TransformationService extends BasicService implements Transformatio
 
 
     protected Document singleTransformation(Map.Entry<Profile,List<Profile>> entry){
-        boolean validateIGM = true;
+        String validationType = TransformationUtils.IGM;
         Profile key = entry.getKey();
         try {
             Document resulting_xmi ;
@@ -228,7 +230,7 @@ public class TransformationService extends BasicService implements Transformatio
                     merged_TP = TPs.get(0);
                 } else { // size >1
                     // CGM
-                    validateIGM = false;
+                    validationType = CGM;
                     merged_EQ = createMergeProfile(EQs, "EQ", TransformationUtils.getBusinessProcess(key.xml_name));
                     merged_SSH = createMergeProfile(SSHs, "SSH", TransformationUtils.getBusinessProcess(key.xml_name));
                     merged_TP = createMergeProfile(TPs, "TP", TransformationUtils.getBusinessProcess(key.xml_name));
@@ -242,7 +244,7 @@ public class TransformationService extends BasicService implements Transformatio
                     if (Configuration.debugMode)
                         printDocument(merged_xml, Configuration.cacheDir.resolve(key + "_mergedXML.xml"));
 
-                    resulting_xmi = createXmi(key, merged_xml, validateIGM);
+                    resulting_xmi = createXmi(key, merged_xml, validationType);
                     isNB.remove(key); //FIXME: not clean
                     isShortCircuit.remove(key); //FIXME: not clean
                     return resulting_xmi;
@@ -285,9 +287,7 @@ public class TransformationService extends BasicService implements Transformatio
      * @throws SAXException
      * @throws ParserConfigurationException
      */
-    private void parseEcore() throws IOException, URISyntaxException, SAXException, ParserConfigurationException {
-        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-        builderFactory.setNamespaceAware(true);
+    private void parseEcore() throws IOException, SAXException, ParserConfigurationException {
         DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
         Document doc = documentBuilder.parse(Configuration.configs.get("ecore_model"));
         NodeList nodeList = doc.getElementsByTagName("eClassifiers");
@@ -757,14 +757,12 @@ public class TransformationService extends BasicService implements Transformatio
      * @throws IOException
      * @throws TransformerException
      */
-    public Document createXmi(Profile key, Document target, boolean valideIGM) throws URISyntaxException, ParserConfigurationException, SAXException, IOException {
+    public Document createXmi(Profile key, Document target, String validationType) throws URISyntaxException, ParserConfigurationException, SAXException, IOException {
         xmiXmlns = null;
         xmiXmlns = new HashMap<>();
         HashMap<String,String> sub = parseEcoreXmi();
-        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = builderFactory.newDocumentBuilder();
         Document xmi = builder.newDocument();
-
 
         HashMap<String,Integer> numbering = new HashMap<>();
         Node[] objects = convertToArray(target.getDocumentElement().getChildNodes());
@@ -797,10 +795,7 @@ public class TransformationService extends BasicService implements Transformatio
 
         }
 
-        if(valideIGM)
-            xmi.getDocumentElement().setAttribute("type","igm");
-        else
-            xmi.getDocumentElement().setAttribute("type","cgm");
+        xmi.getDocumentElement().setAttribute("type",validationType);
         xmi.getDocumentElement().setAttribute("validationScope", "QOCDCV3_1");
         xmi.getDocumentElement().setAttribute("excludeProvedRules", "false");
         xmi.getDocumentElement().setAttribute("local_level_validation", "true");
@@ -876,8 +871,6 @@ public class TransformationService extends BasicService implements Transformatio
      */
     private HashMap<String, String> parseEcoreXmi() throws IOException, URISyntaxException, ParserConfigurationException, SAXException {
         HashMap<String,String> sub = new HashMap<>();
-        DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-        builderFactory.setNamespaceAware(true);
         DocumentBuilder documentBuilder = builderFactory.newDocumentBuilder();
         Document doc = documentBuilder.parse(Configuration.configs.get("ecore_model"));
         Node[] subpackages = convertToArray(doc.getElementsByTagName("eSubpackages"));
