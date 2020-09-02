@@ -59,10 +59,10 @@ public class ReportingService extends BasicService implements ReportingListener{
     }
 
     @Override
-    public void enqueueForReporting(Profile p, List<EvaluationResult> errors) {
+    public void enqueueForReporting(Profile p, List<EvaluationResult> errors, String validationType) {
 
-        if (Configuration.generateXLSreports) executorService.submit(new ExcelReportingTask(p, errors));
-        if (Configuration.generateXMLreports) executorService.submit(new XmlReportingTask(p, errors));
+        if (Configuration.generateXLSreports) executorService.submit(new ExcelReportingTask(p, errors, validationType));
+        if (Configuration.generateXMLreports) executorService.submit(new XmlReportingTask(p, errors, validationType));
 
         // debug: display pool size
         if (Configuration.debugMode)
@@ -74,13 +74,15 @@ public class ReportingService extends BasicService implements ReportingListener{
 
         protected Profile svProfile;
         protected List<EvaluationResult> validationResults;
+        protected String validationType;
         protected ReportWriter reportWriter;
         protected Path path;
 
-        ReportingTask(Profile p, List<EvaluationResult> results){
+        ReportingTask(Profile p, List<EvaluationResult> results, String validationType){
             super(priority);
             this.svProfile = p;
             this.validationResults = results;
+            this.validationType = validationType;
         }
 
         public void run()  {
@@ -94,8 +96,8 @@ public class ReportingService extends BasicService implements ReportingListener{
 
     private class ExcelReportingTask extends ReportingTask{
 
-        ExcelReportingTask(Profile p, List<EvaluationResult> results){
-            super(p, results);
+        ExcelReportingTask(Profile p, List<EvaluationResult> results, String validationType){
+            super(p, results, validationType);
             reportWriter = new XLSReportWriter();
             path = xlsReportsPath;
         }
@@ -105,9 +107,9 @@ public class ReportingService extends BasicService implements ReportingListener{
 
     private class XmlReportingTask extends ReportingTask{
 
-        XmlReportingTask(Profile p, List<EvaluationResult> results){
-            super(p, results);
-            reportWriter = new XMLReportWriter();
+        XmlReportingTask(Profile p, List<EvaluationResult> results, String validationType){
+            super(p, results, validationType);
+            reportWriter = new XMLReportWriter(validationType);
             path = xmlReportsPath;
         }
 

@@ -16,6 +16,8 @@ package ocl.service.util;
 
 import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
 import ocl.Profile;
+import ocl.service.reporting.xml.CGM;
+import ocl.service.reporting.xml.CGMValidationParameters;
 import ocl.service.reporting.xml.IGM;
 import ocl.service.reporting.xml.IGMValidationParameters;
 import ocl.service.reporting.xml.ObjectFactory;
@@ -41,6 +43,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import static ocl.service.reporting.xml.IGM.*;
+
 public class XMLReportWriter implements ReportWriter {
 
     // NB. to add generated sources in Intellij: right click on project folder, select maven and generate sources and update folders
@@ -50,9 +54,11 @@ public class XMLReportWriter implements ReportWriter {
     private JAXBContext context;
     private Marshaller marshaller;
     private ObjectFactory factory;
+    private String validationType;
 
-    public XMLReportWriter() {
+    public XMLReportWriter(String validationType) {
         try {
+            this.validationType = validationType;
             context = JAXBContext.newInstance(QAReport.class);
             marshaller = context.createMarshaller();
             marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
@@ -66,6 +72,14 @@ public class XMLReportWriter implements ReportWriter {
 
     @Override
     public void writeSingleReport(Profile p, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) {
+        if (TransformationUtils.IGM.equalsIgnoreCase(validationType)){
+            writeSingleIGMReport(p, results, rules, path);
+        } else
+            writeSingleCGMReport(p, results, rules, path);
+    }
+
+
+    public void writeSingleIGMReport(Profile p, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) {
 
         QAReport report = factory.createQAReport();
         try {
@@ -122,6 +136,69 @@ public class XMLReportWriter implements ReportWriter {
         }
     }
 
+    public void writeSingleCGMReport(Profile p, List<EvaluationResult> results, HashMap<String, RuleDescription> rules, Path path) {
+
+        QAReport report = factory.createQAReport();
+        try {
+
+            // created
+            Instant instant = Instant.now();
+            XMLGregorianCalendar instant2 = DatatypeFactory.newInstance().newXMLGregorianCalendar(instant.toString());
+            report.setCreated(instant2);
+            // scheme version
+            report.setSchemeVersion(new BigDecimal(3));
+            // service provider
+            report.setServiceProvider("QoCDCv3.2 prototype");
+
+            // validation parameters
+            CGMValidationParameters cgmValidationParameters = factory.createCGMValidationParameters();
+
+            // set report for CGM
+            CGM cgm = factory.createCGM();
+            String[] meta = IOUtils.trimExtension(p.xml_name).split("_");             //20191009T0930Z_1D_EMS_SV_000.zip
+            String i = meta[0].substring(0,4)+"-"+meta[0].substring(4,6)+"-"+meta[0].substring(6,11)+
+                    ":" + meta[0].substring(11,13) + ":00.000" + meta[0].substring(13);//FIXME: not clean
+            XMLGregorianCalendar scenarioTime = DatatypeFactory.newInstance().newXMLGregorianCalendar(i);
+            cgm.setCreated(scenarioTime); // TODO: shall be extracted from header
+            cgm.setScenarioTime(scenarioTime);
+            cgm.setProcessType(meta[1]);
+            cgm.setTso(meta[2]);
+            cgm.setVersion(new Integer(meta[4]));
+            cgm.setValidationParameters(cgmValidationParameters);
+            // resource
+            cgm.setResource(p.id);
+            // add IGMs info
+            //FIXME: check content
+            for (String s: p.depOn) {
+                IGM igm = factory.createIGM();
+                igm.getResource().add(s);
+                cgm.getIGM().add(igm);
+            }
+            // add violated rules
+            List<RuleViolation> violatedRules = getViolatedRules(p, results, rules);
+            cgm.getRuleViolation().addAll(violatedRules);
+            cgm.setQualityIndicator(getQualityIndicator(results));
+            report.getCGM().add(cgm);
+
+            // create report
+            NamespacePrefixMapper mapper = new NamespacePrefixMapper() {
+                public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
+                    if (NAMESPACE_QAR.equals(namespaceUri) && !requirePrefix)
+                        return "";
+                    return "ns";
+                }
+            };
+            marshaller.setProperty("com.sun.xml.bind.namespacePrefixMapper", mapper);
+
+            Path outputFile = path.resolve("QAR_"+p.xml_name);
+            marshaller.marshal(new JAXBElement<QAReport>(new QName(NAMESPACE_QAR, "QAReport"), QAReport.class, report), outputFile.toFile());
+
+            //FIXME: solve problems with namespace!
+        } catch (Exception e) {
+            logger.severe("Cannot create xml report for :" + p.xml_name);
+            e.printStackTrace();
+        }
+    }
 
     private List<RuleViolation> getViolatedRules(Profile p,  List<EvaluationResult> results, HashMap<String, RuleDescription> rules){
         List<RuleViolation> violatedRules = new ArrayList<>();
