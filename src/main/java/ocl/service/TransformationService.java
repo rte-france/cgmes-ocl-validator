@@ -242,7 +242,7 @@ public class TransformationService extends BasicService implements Transformatio
 
                     //DEBUG: print merged XML to disk
                     if (Configuration.debugMode)
-                        printDocument(merged_xml, Configuration.cacheDir.resolve(key + "_mergedXML.xml"));
+                        printDocument(merged_xml, Configuration.cacheDir.resolve(key.xml_name + "_mergedXML.xml"));
 
                     resulting_xmi = createXmi(key, merged_xml, validationType);
                     isNB.remove(key); //FIXME: not clean
