@@ -11,7 +11,7 @@ of data they generate or use.
 
 ### Requirements
 
-- Java >= 1.8. It can be downloaded from https://www.java.com/fr/download/.
+- Java 64 bits >= 1.8. It can be downloaded from https://www.java.com/fr/download/.
 - Maven >= 3.5. it can be downloaded from https://maven.apache.org/download.cgi
 
 Be sure that Java and maven are properly configured.
