@@ -596,7 +596,7 @@ public class TransformationService extends BasicService implements Transformatio
                         for (Node child : convertToArray(TPs2add.get(t).getChildNodes())) {
                             if(!StringUtils.isEmpty(child.getLocalName()) && StringUtils.contains(child.getLocalName(),"BaseVoltage")){
                                 bv = (child.getAttributes().item(0).getNodeValue().replace("#",""));
-                                if(!declaredBV.containsKey(bv)){
+                                if ((!declaredBV.containsKey(bv)) && (BVmap.get(bv)!=null)){
                                     Node node1 = target.importNode(BVmap.get(bv),true);
                                     addModelBrlndDependency(target.getDocumentElement().appendChild(node1),EQ.type,eqbd.id,target);
                                     declaredBV.put(bv,node1);
