@@ -571,6 +571,12 @@ public class TransformationService extends BasicService implements Transformatio
                                     Node node = target.importNode(childs.item(c),true);
                                     eq_.get(id).appendChild(node);
                                 }
+                                if(!StringUtils.isEmpty(childs.item(c).getLocalName()) && StringUtils.contains(childs.item(c).getLocalName(),"TopologicalNode")){
+                                    String ReferredTp=childs.item(c).getAttributes().item(0).getNodeValue().replace("#","");
+                                    if(!TPs2add.containsKey(ReferredTp)){
+                                        TPs2add.put(ReferredTp,null);
+                                    }
+                                }
                             }
                         }
                     }
