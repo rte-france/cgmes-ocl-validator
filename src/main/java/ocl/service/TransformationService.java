@@ -1041,7 +1041,8 @@ public class TransformationService extends BasicService implements Transformatio
                         if(childs.item(c).getLocalName()!=null){
                             String localName= childs.item(c).getLocalName();
                             if(localName.contains("Model.scenarioTime")){
-                                effectiveDate = childs.item(c).getTextContent().replaceAll("[:.-]","");
+                                effectiveDate = childs.item(c).getTextContent();
+                                // ".replaceAll("[:.-]","")" was deleted because we had this error reported in validation: Value '20201026T000000000Z' is not
                             }
                             if(localName.contains("Model.modelingAuthoritySet")){
                                 Pattern pattern = Pattern.compile("\\:\\/\\/(.*)\\..*\\/");

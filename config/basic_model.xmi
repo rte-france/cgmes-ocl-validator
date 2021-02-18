@@ -138,12 +138,12 @@
                    <modelingAuthorities>steg</modelingAuthorities>
                    <modelingAuthorities>one</modelingAuthorities>
                    <modelingAuthorities>fskees</modelingAuthorities>
-                   <synchronousAreas>EU</synchronousAreas>
-                   <synchronousAreas>CE</synchronousAreas>
-                   <synchronousAreas>BA</synchronousAreas>
-                   <synchronousAreas>NO</synchronousAreas>
-                   <synchronousAreas>IN</synchronousAreas>
-                   <synchronousAreas>UK</synchronousAreas>
+                   <cgmRegions>EU</cgmRegions>
+                   <cgmRegions>CE</cgmRegions>
+                   <cgmRegions>BA</cgmRegions>
+                   <cgmRegions>NO</cgmRegions>
+                   <cgmRegions>IN</cgmRegions>
+                   <cgmRegions>UK</cgmRegions>
                    <mas>http://www.baltic-rsc.eu/OperationalPlanning</mas>
                    <mas>http://www.coreso.eu/OperationalPlanning</mas>
                    <mas>http://www.entsoe.eu/OperationalPlanning</mas>
