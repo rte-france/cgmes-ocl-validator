@@ -1033,6 +1033,9 @@ public class TransformationService extends BasicService implements Transformatio
         String effectiveDate = "";
         String sourcingTSO_ = "";
         String fileVersion_ = "";
+        String modelingAuthority_ = "";
+        String usage_ = "";
+        String description_ = "";
         for(int i=0; i<fullmodel.getLength();i++){
             if(fullmodel.item(i).getLocalName()!=null){
                 if(fullmodel.item(i).hasChildNodes()){
@@ -1045,7 +1048,7 @@ public class TransformationService extends BasicService implements Transformatio
                                 // ".replaceAll("[:.-]","")" was deleted because we had this error reported in validation: Value '20201026T000000000Z' is not legal
                             }
                             if(localName.contains("Model.modelingAuthoritySet")){
-                                Pattern pattern = Pattern.compile("\\:\\/\\/(.*)\\..*\\/");
+                                Pattern pattern = Pattern.compile("\\:\\/\\/(.*\\..*?)\\/");
                                 Matcher matcher = pattern.matcher(childs.item(c).getTextContent());
                                 while (matcher.find()) {
                                     for (int l = 1; l <= matcher.groupCount(); l++) {
@@ -1055,9 +1058,34 @@ public class TransformationService extends BasicService implements Transformatio
                                 if(StringUtils.isEmpty(sourcingTSO_)){
                                     sourcingTSO_= childs.item(c).getTextContent();
                                 }
+
+                                Pattern pattern2 = Pattern.compile("(.*\\..*?)\\/");
+                                Matcher matcher2 = pattern2.matcher(childs.item(c).getTextContent());
+                                while (matcher2.find()) {
+                                    for (int l = 1; l <= matcher2.groupCount(); l++) {
+                                        modelingAuthority_=matcher2.group(l);
+                                    }
+                                }
+                                if(StringUtils.isEmpty(modelingAuthority_)) {
+                                    modelingAuthority_ = childs.item(c).getTextContent();
+                                }
+
+                                Pattern pattern3 = Pattern.compile(".*\\/.*?(.*)");
+                                Matcher matcher3 = pattern3.matcher(childs.item(c).getTextContent());
+                                while (matcher3.find()) {
+                                    for (int l = 1; l <= matcher3.groupCount(); l++) {
+                                        usage_=matcher3.group(l);
+                                    }
+                                }
+                                if(StringUtils.isEmpty(usage_)) {
+                                    usage_ = childs.item(c).getTextContent();
+                                }
                             }
                             if(localName.contains("Model.version")){
                                 fileVersion_ = childs.item(c).getTextContent();
+                            }
+                            if(localName.contains("Model.description")){
+                                description_ = childs.item(c).getTextContent();
                             }
                         }
                     }
@@ -1066,26 +1094,27 @@ public class TransformationService extends BasicService implements Transformatio
         }
 
         Node region = doc.createElement("brlnd:Model.region");
-        Node bp = doc.createElement("brlnd:Model.bp");
-        Node tool = doc.createElement("brlnd:Model.tool");
-        Node rsc = doc.createElement("brlnd:Model.rsc");
-        Node effectiveDateTime = doc.createElement("brlnd:Model.effectiveDateTime");
-        Node businessProcess = doc.createElement("brlnd:Model.businessProcess");
-        Node sourcingTSO = doc.createElement("brlnd:Model.sourcingTSO");
-        Node modelPart = doc.createElement("brlnd:Model.modelPart");
-        Node fileVersion = doc.createElement("brlnd:Model.fileVersion");
-        Node sourcingRSC = doc.createElement("brlnd:Model.sourcingRSC");
-
+        region.setTextContent(modelPart_.contains("BD")?"BD":"IGM");
         fullmodel.item(0).appendChild(region);
+
+        Node bp = doc.createElement("brlnd:Model.bp"); //Empty
         fullmodel.item(0).appendChild(bp);
+
+        Node tool = doc.createElement("brlnd:Model.tool"); //Empty
         fullmodel.item(0).appendChild(tool);
+
+        Node rsc = doc.createElement("brlnd:Model.rsc"); //Empty
         fullmodel.item(0).appendChild(rsc);
 
+        Node effectiveDateTime = doc.createElement("brlnd:Model.effectiveDateTime");
         effectiveDateTime.setTextContent(effectiveDate);
         fullmodel.item(0).appendChild(effectiveDateTime);
 
+        Node businessProcess = doc.createElement("brlnd:Model.businessProcess");
         if(business!=null) businessProcess.setTextContent(business);
         fullmodel.item(0).appendChild(businessProcess);
+
+        Node sourcingTSO = doc.createElement("brlnd:Model.sourcingTSO");
 
         if(sourcingTSO_!=null){
             sourcingTSO.setTextContent(sourcingTSO_);
@@ -1098,14 +1127,31 @@ public class TransformationService extends BasicService implements Transformatio
         }
         fullmodel.item(0).appendChild(sourcingTSO);
 
+        Node modelPart = doc.createElement("brlnd:Model.modelPart");
         if(modelPart_!=null) modelPart.setTextContent(modelPart_);
         fullmodel.item(0).appendChild(modelPart);
 
+        Node fileVersion = doc.createElement("brlnd:Model.fileVersion");
         fileVersion.setTextContent(fileVersion_);
         fullmodel.item(0).appendChild(fileVersion);
 
+        Node description = doc.createElement("brlnd:Model.description");
+        description.setTextContent(description_);
+        fullmodel.item(0).appendChild(description);
+
+        Node sourcingRSC = doc.createElement("brlnd:Model.sourcingRSC");
         fullmodel.item(0).appendChild(sourcingRSC);
 
+        Node modelingAuthority = doc.createElement("brlnd:Model.modelingAuthority");
+        modelingAuthority.setTextContent(modelingAuthority_);
+        fullmodel.item(0).appendChild(modelingAuthority);
+
+        Node usage = doc.createElement("brlnd:Model.usage");
+        usage.setTextContent(usage_);
+        fullmodel.item(0).appendChild(usage);
+
+        Node cgmRegion = doc.createElement("brlnd:Model.cgmRegion"); // empty
+        fullmodel.item(0).appendChild(cgmRegion);
     }
 
     /**
