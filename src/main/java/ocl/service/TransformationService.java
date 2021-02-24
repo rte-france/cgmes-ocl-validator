@@ -1338,8 +1338,6 @@ public class TransformationService extends BasicService implements Transformatio
      * @param nodeList
      * @param s
      * @param begin
-     * @throws IOException
-     * @throws TransformerException
      */
     private HashMap<String,Node> addObject(Document doc, NodeList nodeList, String s, boolean begin) {
         NodeList nodes = nodeList.item(0).getOwnerDocument().getElementsByTagName(s);
